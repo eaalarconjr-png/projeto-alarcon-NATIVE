@@ -46,9 +46,11 @@ routerAdd('POST', '/backend/v1/formularios/{versionId}/respostas', (e) => {
   // 5. valida as respostas contra o esquema da versão (campos permitidos, obrigatórios)
   let schema
   try {
-    schema = version.get('schema')
-    if (typeof schema === 'string') schema = JSON.parse(schema)
+    schema = JSON.parse(version.getString('schema'))
   } catch (_) {
+    return e.badRequestError('Formulário com configuração inválida.')
+  }
+  if (!schema || !Array.isArray(schema.questions)) {
     return e.badRequestError('Formulário com configuração inválida.')
   }
   const questions = (schema && schema.questions) || []
