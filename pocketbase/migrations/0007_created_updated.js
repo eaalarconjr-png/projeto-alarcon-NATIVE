@@ -15,12 +15,10 @@ migrate(
     for (const name of names) {
       const col = app.findCollectionByNameOrId(name)
       if (!col.fields.getByName('created')) {
-        col.fields.add(new AutodateField({ name: 'created', autodateTriggers: ['onCreate'] }))
+        col.fields.add(new AutodateField({ name: 'created', onCreate: true, onUpdate: false }))
       }
       if (!col.fields.getByName('updated')) {
-        col.fields.add(
-          new AutodateField({ name: 'updated', autodateTriggers: ['onCreate', 'onUpdate'] }),
-        )
+        col.fields.add(new AutodateField({ name: 'updated', onCreate: true, onUpdate: true }))
       }
       app.save(col)
     }
