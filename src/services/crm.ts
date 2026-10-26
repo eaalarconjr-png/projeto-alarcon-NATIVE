@@ -1,6 +1,7 @@
 // task AL-F1-02: dados de contatos e oportunidades — só o serviço fala com o SDK
 import pb from '@/lib/pocketbase/client'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { getCurrentUser } from '@/services/auth'
 
 export interface Contact {
   id: string
@@ -161,6 +162,89 @@ export const getOpportunity = async (id: string): Promise<Opportunity> => {
       .collection('opportunities')
       .getOne(id, { expand: 'contact,owner' })) as unknown as Opportunity
   } catch (error) {
+    throw new Error(getErrorMessage(error))
+  }
+}
+
+export const moveStage = async (id: string, toStage: string, note?: string): Promise<void> => {
+  try {
+    const op = await getOpportunity(id)
+    const author = getCurrentUser()?.id
+    if (!author) throw new Error('Sessão expirada. Entre novamente para continuar.')
+    if (op.stage === toStage) {
+      throw new Error('A oportunidade já está nesta etapa.')
+    }
+    await pb.collection('stage_history').create({
+      opportunity: id,
+      from_stage: op.stage,
+      to_stage: toStage,
+      author,
+      note: note?.trim() || '',
+    })
+    await pb.collection('opportunities').update(id, { stage: toStage })
+  } catch (error) {
+    if (error instanceof Error && error.message) throw error
+    throw new Error(getErrorMessage(error))
+  }
+}
+
+export const setNextStep = async (id: string, text: string, date?: string): Promise<void> => {
+  try {
+    await pb.collection('opportunities').update(id, {
+      next_step: text.trim(),
+      next_step_at: date || '',
+    })
+  } catch (error) {
+    throw new Error(getErrorMessage(error))
+  }
+}
+
+/** Encerramento exige resultado ou motivo (SPEC AL-F1) — validado aqui e na tela. */
+export const closeOpportunity = async (id: string, reason: string): Promise<void> => {
+  if (!reason.trim()) {
+    throw new Error('Informe o resultado ou o motivo do encerramento.')
+  }
+  try {
+    const op = await getOpportunity(id)
+    const author = getCurrentUser()?.id
+    if (!author) throw new Error('Sessão expirada. Entre novamente para continuar.')
+    await pb.collection('stage_history').create({
+      opportunity: id,
+      from_stage: op.stage,
+      to_stage: 'encerrado',
+      author,
+      note: `Encerrada: ${reason.trim()}`,
+    })
+    await pb.collection('opportunities').update(id, {
+      status: 'encerrada',
+      stage: 'encerrado',
+      close_reason: reason.trim(),
+    })
+  } catch (error) {
+    if (error instanceof Error && error.message) throw error
+    throw new Error(getErrorMessage(error))
+  }
+}
+
+export const reopenOpportunity = async (id: string, toStage: string): Promise<void> => {
+  try {
+    const op = await getOpportunity(id)
+    const author = getCurrentUser()?.id
+    if (!author) throw new Error('Sessão expirada. Entre novamente para continuar.')
+    await pb.collection('stage_history').create({
+      opportunity: id,
+      from_stage: 'encerrado',
+      to_stage: toStage,
+      author,
+      note: 'Reaberta',
+    })
+    await pb.collection('opportunities').update(id, {
+      status: 'aberta',
+      stage: toStage,
+      close_reason: '',
+    })
+  } catch (error) {
+    if (error instanceof Error && error.message) throw error
     throw new Error(getErrorMessage(error))
   }
 }

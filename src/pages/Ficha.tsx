@@ -2,15 +2,30 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
+  closeOpportunity,
   getContact,
   getOpportunity,
   getStageHistory,
+  moveStage,
+  reopenOpportunity,
+  setNextStep,
   type Contact,
   type HistoryEntry,
   type Opportunity,
 } from '@/services/crm'
+
+const STAGES = [
+  { value: 'novo', label: 'Novo' },
+  { value: 'em_atendimento', label: 'Em atendimento' },
+  { value: 'agendamento_solicitado', label: 'Agendamento solicitado' },
+  { value: 'consulta_confirmada', label: 'Consulta confirmada' },
+  { value: 'em_acompanhamento', label: 'Em acompanhamento' },
+  { value: 'encerrado', label: 'Encerrado' },
+]
 
 const STAGE_LABELS: Record<string, string> = {
   novo: 'Novo',
@@ -58,6 +73,52 @@ export default function FichaPage() {
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const [nextStep, setNextStep] = useState('')
+  const [nextStepAt, setNextStepAt] = useState('')
+  const [moveStageValue, setMoveStageValue] = useState('em_atendimento')
+  const [moveNote, setMoveNote] = useState('')
+  const [reopenStage, setReopenStage] = useState('novo')
+  const [savingStep, setSavingStep] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const refresh = async () => {
+    if (!id) return
+    try {
+      const op = await getOpportunity(id)
+      setOpportunity(op)
+      setHistory(await getStageHistory(id))
+      setNextStep(op.next_step || '')
+      setNextStepAt(op.next_step_at ? op.next_step_at.slice(0, 10) : '')
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Não foi possível atualizar a ficha.')
+    }
+  }
+
+  const runAction = async (action: () => Promise<void>) => {
+    setActionError(null)
+    setSavingStep(true)
+    try {
+      await action()
+      await refresh()
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Não foi possível concluir a ação.')
+    } finally {
+      setSavingStep(false)
+    }
+  }
+
+  const saveNextStep = () =>
+    runAction(() => setNextStep(id ?? '', nextStep, nextStepAt || undefined))
+  const move = () => runAction(() => moveStage(id ?? '', moveStageValue, moveNote))
+  const close = () =>
+    runAction(async () => {
+      const reason = window.prompt('Resultado ou motivo do encerramento (obrigatório):')
+      if (reason === null)
+        throw new Error('Encerramento cancelado: informe o motivo para encerrar.')
+      await closeOpportunity(id ?? '', reason)
+    })
+  const reopen = () => runAction(() => reopenOpportunity(id ?? '', reopenStage))
 
   useEffect(() => {
     if (!id) return
@@ -163,6 +224,100 @@ export default function FichaPage() {
               {opportunity.close_reason ? ` — ${opportunity.close_reason}` : ''}
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Próximo passo e movimentação</CardTitle>
+          <CardDescription>
+            Consulta confirmada e resultado comercial dependem de confirmação humana
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-48 flex-1 space-y-1">
+              <Label htmlFor="next-step">Próximo passo</Label>
+              <Input
+                id="next-step"
+                value={nextStep}
+                onChange={(e) => setNextStep(e.target.value)}
+                placeholder="Ex.: ligar para confirmar consulta"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="next-step-at">Data</Label>
+              <Input
+                id="next-step-at"
+                type="date"
+                value={nextStepAt}
+                onChange={(e) => setNextStepAt(e.target.value)}
+              />
+            </div>
+            <Button onClick={saveNextStep} disabled={savingStep}>
+              {savingStep ? 'Salvando…' : 'Salvar próximo passo'}
+            </Button>
+          </div>
+          {opportunity.status === 'encerrada' ? (
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-40 flex-1 space-y-1">
+                <Label htmlFor="reopen-stage">Reabrir na etapa</Label>
+                <select
+                  id="reopen-stage"
+                  value={reopenStage}
+                  onChange={(e) => setReopenStage(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  {STAGES.filter((s) => s.value !== 'encerrado').map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button variant="outline" onClick={reopen} disabled={savingStep}>
+                {savingStep ? 'Reabrindo…' : 'Reabrir oportunidade'}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-40 flex-1 space-y-1">
+                <Label htmlFor="move-stage">Mover para a etapa</Label>
+                <select
+                  id="move-stage"
+                  value={moveStageValue}
+                  onChange={(e) => setMoveStageValue(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  {STAGES.filter((s) => s.value !== opportunity.stage).map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="min-w-40 flex-1 space-y-1">
+                <Label htmlFor="move-note">Observação (opcional)</Label>
+                <Input
+                  id="move-note"
+                  value={moveNote}
+                  onChange={(e) => setMoveNote(e.target.value)}
+                  placeholder="Anotação que entra no histórico"
+                />
+              </div>
+              <Button onClick={move} disabled={savingStep}>
+                {savingStep ? 'Movendo…' : 'Mover'}
+              </Button>
+              <Button variant="destructive" onClick={close} disabled={savingStep}>
+                {savingStep ? 'Encerrando…' : 'Encerrar…'}
+              </Button>
+            </div>
+          )}
+          {actionError && (
+            <p className="text-sm text-destructive" role="alert">
+              {actionError}
+            </p>
+          )}
         </CardContent>
       </Card>
 
