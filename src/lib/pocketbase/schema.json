@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-26T19:01:43.915Z",
+  "generatedAt": "2026-10-26T19:03:12.513Z",
   "collections": [
     {
       "name": "users",
@@ -411,6 +411,68 @@
       ],
       "indexes": [
         "CREATE INDEX idx_form_versions_form ON form_versions (form)"
+      ]
+    },
+    {
+      "name": "submissions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "form_version",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "form_versions"
+        },
+        {
+          "name": "submission_key",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "answers",
+          "type": "json",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "origin_declared",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "whatsapp",
+            "site",
+            "indicacao",
+            "convenio_app",
+            "outro",
+            "nao_identificado"
+          ]
+        },
+        {
+          "name": "origin_captured",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "opportunity",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "opportunities"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_submissions_key ON submissions (submission_key)"
       ]
     }
   ]

@@ -14,6 +14,7 @@ import FichaPage from './pages/Ficha'
 import ConfiguracoesPage from './pages/Configuracoes'
 import FormulariosPage from './pages/Formularios'
 import FormEditorPage from './pages/FormEditor'
+import FormularioPublicoPage from './pages/FormularioPublico'
 import RequireAuth from './components/RequireAuth'
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
@@ -26,6 +27,7 @@ const App = () => (
       <Sonner />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/f/:versionId" element={<FormularioPublicoPage />} />{' '}
         <Route element={<Layout />}>
           <Route
             path="/"
