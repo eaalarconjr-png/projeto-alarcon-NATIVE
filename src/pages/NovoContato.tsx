@@ -222,7 +222,7 @@ export default function NovoContatoPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => useExisting(contact.id)}
+                      onClick={() => adoptExisting(contact.id)}
                     >
                       Usar este cadastro
                     </Button>
