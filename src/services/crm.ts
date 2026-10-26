@@ -249,6 +249,39 @@ export const reopenOpportunity = async (id: string, toStage: string): Promise<vo
   }
 }
 
+export interface ClinicSettings {
+  stage_labels: Record<string, string>
+  credentialed_operators: string[]
+}
+
+export const getClinicSettings = async (): Promise<ClinicSettings> => {
+  try {
+    const rec = await pb
+      .collection('clinic_settings')
+      .getFirstListItem(pb.filter("settings_key = 'main'"))
+    return {
+      stage_labels: (rec.stage_labels as unknown as ClinicSettings['stage_labels']) || {},
+      credentialed_operators: (rec.credentialed_operators as unknown as string[]) || [],
+    }
+  } catch (error) {
+    throw new Error(getErrorMessage(error))
+  }
+}
+
+export const updateClinicSettings = async (data: ClinicSettings): Promise<void> => {
+  try {
+    const rec = await pb
+      .collection('clinic_settings')
+      .getFirstListItem(pb.filter("settings_key = 'main'"))
+    await pb.collection('clinic_settings').update(rec.id, {
+      stage_labels: JSON.stringify(data.stage_labels),
+      credentialed_operators: JSON.stringify(data.credentialed_operators),
+    })
+  } catch (error) {
+    throw new Error(getErrorMessage(error))
+  }
+}
+
 export interface HistoryEntry {
   id: string
   from_stage: string
