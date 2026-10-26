@@ -12,6 +12,8 @@ import OportunidadesPage from './pages/Oportunidades'
 import NovoContatoPage from './pages/NovoContato'
 import FichaPage from './pages/Ficha'
 import ConfiguracoesPage from './pages/Configuracoes'
+import FormulariosPage from './pages/Formularios'
+import FormEditorPage from './pages/FormEditor'
 import RequireAuth from './components/RequireAuth'
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
@@ -54,6 +56,22 @@ const App = () => (
             element={
               <RequireAuth>
                 <ConfiguracoesPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/formularios"
+            element={
+              <RequireAuth>
+                <FormulariosPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/formularios/:id"
+            element={
+              <RequireAuth>
+                <FormEditorPage />
               </RequireAuth>
             }
           />
