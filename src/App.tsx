@@ -8,6 +8,9 @@ import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import LoginPage from './pages/Login'
 import HomePage from './pages/Home'
+import OportunidadesPage from './pages/Oportunidades'
+import NovoContatoPage from './pages/NovoContato'
+import FichaPage from './pages/Ficha'
 import RequireAuth from './components/RequireAuth'
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
@@ -25,7 +28,23 @@ const App = () => (
             path="/"
             element={
               <RequireAuth>
-                <HomePage />
+                <OportunidadesPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/contatos/novo"
+            element={
+              <RequireAuth>
+                <NovoContatoPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/oportunidades/:id"
+            element={
+              <RequireAuth>
+                <FichaPage />
               </RequireAuth>
             }
           />
