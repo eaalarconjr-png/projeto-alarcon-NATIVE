@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-26T18:20:01.556Z",
+  "generatedAt": "2026-10-26T18:32:32.155Z",
   "collections": [
     {
       "name": "users",
@@ -8,7 +8,7 @@
         "list": "id = @request.auth.id",
         "view": "id = @request.auth.id",
         "create": "",
-        "update": "id = @request.auth.id",
+        "update": "id = @request.auth.id && @request.body.role:changed = false",
         "delete": "id = @request.auth.id"
       },
       "fields": [
@@ -29,19 +29,257 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        },
+        {
+          "name": "role",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "admin",
+            "atendimento",
+            "gestor_trafego"
+          ]
         }
       ],
       "indexes": [
         "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
         "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+      ]
+    },
+    {
+      "name": "contacts",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "update": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "delete": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "email",
+          "type": "email",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source_declared",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "whatsapp",
+            "site",
+            "indicacao",
+            "convenio_app",
+            "outro"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_contacts_phone ON contacts (phone)"
+      ]
+    },
+    {
+      "name": "opportunities",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "update": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "delete": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'"
+      },
+      "fields": [
+        {
+          "name": "contact",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "contacts"
+        },
+        {
+          "name": "interest",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "modality",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "particular",
+            "convenio",
+            "reembolso"
+          ]
+        },
+        {
+          "name": "owner",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "stage",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "novo",
+            "em_atendimento",
+            "agendamento_solicitado",
+            "consulta_confirmada",
+            "em_acompanhamento",
+            "encerrado"
+          ]
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "aberta",
+            "encerrada"
+          ]
+        },
+        {
+          "name": "close_reason",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "next_step",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "next_step_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "origin_declared",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "whatsapp",
+            "site",
+            "indicacao",
+            "convenio_app",
+            "outro",
+            "nao_identificado"
+          ]
+        },
+        {
+          "name": "origin_captured",
+          "type": "text",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_opportunities_stage ON opportunities (stage)",
+        "CREATE INDEX idx_opportunities_owner ON opportunities (owner)",
+        "CREATE INDEX idx_opportunities_contact ON opportunities (contact)"
+      ]
+    },
+    {
+      "name": "stage_history",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "update": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "delete": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'"
+      },
+      "fields": [
+        {
+          "name": "opportunity",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "opportunities"
+        },
+        {
+          "name": "from_stage",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "novo",
+            "em_atendimento",
+            "agendamento_solicitado",
+            "consulta_confirmada",
+            "em_acompanhamento",
+            "encerrado"
+          ]
+        },
+        {
+          "name": "to_stage",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "novo",
+            "em_atendimento",
+            "agendamento_solicitado",
+            "consulta_confirmada",
+            "em_acompanhamento",
+            "encerrado"
+          ]
+        },
+        {
+          "name": "author",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_stage_history_opportunity ON stage_history (opportunity)"
       ]
     }
   ]

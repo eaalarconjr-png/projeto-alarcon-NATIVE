@@ -123,14 +123,6 @@ migrate(
 
     // 4. stage_history — movimentação auditada (autor e data em cada mudança de etapa)
     const opportunitiesId = app.findCollectionByNameOrId('opportunities').id
-    const stageValues = [
-      'novo',
-      'em_atendimento',
-      'agendamento_solicitado',
-      'consulta_confirmada',
-      'em_acompanhamento',
-      'encerrado',
-    ]
     const stageHistory = new Collection({
       name: 'stage_history',
       type: 'base',
@@ -148,8 +140,33 @@ migrate(
           cascadeDelete: true,
           maxSelect: 1,
         },
-        { name: 'from_stage', type: 'select', values: stageValues, maxSelect: 1 },
-        { name: 'to_stage', type: 'select', values: stageValues, required: true, maxSelect: 1 },
+        {
+          name: 'from_stage',
+          type: 'select',
+          values: [
+            'novo',
+            'em_atendimento',
+            'agendamento_solicitado',
+            'consulta_confirmada',
+            'em_acompanhamento',
+            'encerrado',
+          ],
+          maxSelect: 1,
+        },
+        {
+          name: 'to_stage',
+          type: 'select',
+          values: [
+            'novo',
+            'em_atendimento',
+            'agendamento_solicitado',
+            'consulta_confirmada',
+            'em_acompanhamento',
+            'encerrado',
+          ],
+          required: true,
+          maxSelect: 1,
+        },
         {
           name: 'author',
           type: 'relation',
