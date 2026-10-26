@@ -110,9 +110,10 @@ routerAdd('POST', '/backend/v1/formularios/{versionId}/respostas', (e) => {
         contactId = matches[0].id
         contactName = matches[0].getString('name')
       } else if (matches.length === 0) {
-        const nameQ = questions.find((q) => q.type === 'texto' && /nome/i.test(q.label))
-        const name = nameQ ? String(answers[nameQ.id] || '').slice(0, 120) : ''
-        if (name) {
+        const nameQ =
+          questions.find((q) => q.type === 'texto' && /nome/i.test(q.label)) ||
+          questions.find((q) => q.type === 'texto')
+        const name = nameQ ? String(answers[nameQ.id] || '').slice(0, 120) : ''        if (name) {
           const rec = new Record($app.findCollectionByNameOrId('contacts'))
           rec.set('name', name)
           rec.set('phone', digits)

@@ -29,30 +29,21 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "role",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "admin",
-            "atendimento",
-            "gestor_trafego"
-          ]
+          "selectValues": ["admin", "atendimento", "gestor_trafego"]
         }
       ],
       "indexes": [
@@ -94,18 +85,10 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "whatsapp",
-            "site",
-            "indicacao",
-            "convenio_app",
-            "outro"
-          ]
+          "selectValues": ["whatsapp", "site", "indicacao", "convenio_app", "outro"]
         }
       ],
-      "indexes": [
-        "CREATE INDEX idx_contacts_phone ON contacts (phone)"
-      ]
+      "indexes": ["CREATE INDEX idx_contacts_phone ON contacts (phone)"]
     },
     {
       "name": "opportunities",
@@ -136,11 +119,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "particular",
-            "convenio",
-            "reembolso"
-          ]
+          "selectValues": ["particular", "convenio", "reembolso"]
         },
         {
           "name": "owner",
@@ -168,10 +147,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "aberta",
-            "encerrada"
-          ]
+          "selectValues": ["aberta", "encerrada"]
         },
         {
           "name": "close_reason",
@@ -278,9 +254,7 @@
           "system": false
         }
       ],
-      "indexes": [
-        "CREATE INDEX idx_stage_history_opportunity ON stage_history (opportunity)"
-      ]
+      "indexes": ["CREATE INDEX idx_stage_history_opportunity ON stage_history (opportunity)"]
     },
     {
       "name": "clinic_settings",
@@ -319,9 +293,7 @@
           "collectionRef": "users"
         }
       ],
-      "indexes": [
-        "CREATE UNIQUE INDEX idx_clinic_settings_key ON clinic_settings (settings_key)"
-      ]
+      "indexes": ["CREATE UNIQUE INDEX idx_clinic_settings_key ON clinic_settings (settings_key)"]
     },
     {
       "name": "forms",
@@ -345,11 +317,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "rascunho",
-            "publicado",
-            "desativado"
-          ]
+          "selectValues": ["rascunho", "publicado", "desativado"]
         }
       ],
       "indexes": []
@@ -389,11 +357,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "rascunho",
-            "publicada",
-            "desativada"
-          ]
+          "selectValues": ["rascunho", "publicada", "desativada"]
         },
         {
           "name": "published_at",
@@ -409,9 +373,7 @@
           "collectionRef": "users"
         }
       ],
-      "indexes": [
-        "CREATE INDEX idx_form_versions_form ON form_versions (form)"
-      ]
+      "indexes": ["CREATE INDEX idx_form_versions_form ON form_versions (form)"]
     },
     {
       "name": "submissions",
@@ -471,9 +433,7 @@
           "collectionRef": "opportunities"
         }
       ],
-      "indexes": [
-        "CREATE UNIQUE INDEX idx_submissions_key ON submissions (submission_key)"
-      ]
+      "indexes": ["CREATE UNIQUE INDEX idx_submissions_key ON submissions (submission_key)"]
     }
   ]
 }
