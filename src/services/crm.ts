@@ -107,7 +107,7 @@ export const createOpportunity = async (data: OpportunityInput): Promise<Opportu
     const rec = await pb.collection('opportunities').create({
       contact: data.contact,
       interest: data.interest.trim(),
-      modality: data.modality || '',
+      modality: data.modality || 'particular',
       owner: data.owner,
       stage: 'novo',
       status: 'aberta',
