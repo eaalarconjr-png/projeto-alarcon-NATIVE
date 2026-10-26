@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-10-26T18:32:32.155Z",
+  "generatedAt": "2026-10-26T18:38:44.133Z",
   "collections": [
     {
       "name": "users",
       "type": "auth",
       "apiRules": {
-        "list": "id = @request.auth.id",
+        "list": "@request.auth.id != ''",
         "view": "id = @request.auth.id",
         "create": "",
         "update": "id = @request.auth.id && @request.body.role:changed = false",
@@ -29,21 +29,30 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "role",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["admin", "atendimento", "gestor_trafego"]
+          "selectValues": [
+            "admin",
+            "atendimento",
+            "gestor_trafego"
+          ]
         }
       ],
       "indexes": [
@@ -85,10 +94,18 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["whatsapp", "site", "indicacao", "convenio_app", "outro"]
+          "selectValues": [
+            "whatsapp",
+            "site",
+            "indicacao",
+            "convenio_app",
+            "outro"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_contacts_phone ON contacts (phone)"]
+      "indexes": [
+        "CREATE INDEX idx_contacts_phone ON contacts (phone)"
+      ]
     },
     {
       "name": "opportunities",
@@ -119,7 +136,11 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["particular", "convenio", "reembolso"]
+          "selectValues": [
+            "particular",
+            "convenio",
+            "reembolso"
+          ]
         },
         {
           "name": "owner",
@@ -147,7 +168,10 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["aberta", "encerrada"]
+          "selectValues": [
+            "aberta",
+            "encerrada"
+          ]
         },
         {
           "name": "close_reason",
@@ -254,7 +278,9 @@
           "system": false
         }
       ],
-      "indexes": ["CREATE INDEX idx_stage_history_opportunity ON stage_history (opportunity)"]
+      "indexes": [
+        "CREATE INDEX idx_stage_history_opportunity ON stage_history (opportunity)"
+      ]
     }
   ]
 }

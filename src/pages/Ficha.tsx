@@ -103,7 +103,8 @@ export default function FichaPage() {
   }
 
   const ownerName =
-    (opportunity as unknown as { expand?: { owner?: { name?: string } } }).expand?.owner?.name ?? '—'
+    (opportunity as unknown as { expand?: { owner?: { name?: string } } }).expand?.owner?.name ??
+    '—'
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
@@ -130,7 +131,7 @@ export default function FichaPage() {
           <div>
             <p className="text-muted-foreground">Modalidade</p>
             <p className="font-medium">
-              {MODALITY_LABELS[opportunity.modality] ?? opportunity.modality || '—'}
+              {MODALITY_LABELS[opportunity.modality] ?? (opportunity.modality || '—')}
             </p>
           </div>
           <div>
@@ -144,7 +145,7 @@ export default function FichaPage() {
           <div>
             <p className="text-muted-foreground">Origem declarada</p>
             <p className="font-medium">
-              {ORIGIN_LABELS[opportunity.origin_declared] ?? opportunity.origin_declared || '—'}
+              {ORIGIN_LABELS[opportunity.origin_declared] ?? (opportunity.origin_declared || '—')}
             </p>
           </div>
           <div>

@@ -4,10 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  listOpportunities,
-  type Opportunity,
-} from '@/services/crm'
+import { listOpportunities, type Opportunity } from '@/services/crm'
 
 const STAGE_LABELS: Record<string, string> = {
   novo: 'Novo',
@@ -35,7 +32,11 @@ const MODALITY_LABELS: Record<string, string> = {
 
 const fmtDate = (iso: string) =>
   iso
-    ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    ? new Date(iso).toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      })
     : '—'
 
 /**
@@ -72,7 +73,8 @@ export default function OportunidadesPage() {
 
   const filtered = search.trim()
     ? items.filter((o) => {
-        const c = (o as unknown as { expand?: { contact?: { name?: string; phone?: string } } }).expand?.contact
+        const c = (o as unknown as { expand?: { contact?: { name?: string; phone?: string } } })
+          .expand?.contact
         const hay = `${c?.name ?? ''} ${c?.phone ?? ''} ${o.interest}`.toLowerCase()
         return hay.includes(search.trim().toLowerCase())
       })
@@ -175,7 +177,8 @@ export default function OportunidadesPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map((o) => {
-            const c = (o as unknown as { expand?: { contact?: { name?: string; phone?: string } } }).expand?.contact
+            const c = (o as unknown as { expand?: { contact?: { name?: string; phone?: string } } })
+              .expand?.contact
             const own = (o as unknown as { expand?: { owner?: { name?: string } } }).expand?.owner
             return (
               <Card key={o.id}>
@@ -184,8 +187,8 @@ export default function OportunidadesPage() {
                     {c?.name ?? 'Contato'} · {o.interest}
                   </CardTitle>
                   <CardDescription>
-                    {c?.phone ?? '—'} · {MODALITY_LABELS[o.modality] ?? o.modality || '—'} ·
-                    Origem: {ORIGIN_LABELS[o.origin_declared] ?? o.origin_declared || '—'} ·
+                    {c?.phone ?? '—'} · {MODALITY_LABELS[o.modality] ?? (o.modality || '—')} ·
+                    Origem: {ORIGIN_LABELS[o.origin_declared] ?? (o.origin_declared || '—')} ·
                     Responsável: {own?.name ?? '—'}
                   </CardDescription>
                 </CardHeader>

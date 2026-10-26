@@ -105,7 +105,7 @@ export default function NovoContatoPage() {
     }
   }
 
-  const useExisting = async (id: string) => {
+  const adoptExisting = async (id: string) => {
     setError(null)
     try {
       const contact = await getContact(id)
