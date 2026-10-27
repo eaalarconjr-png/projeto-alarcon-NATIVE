@@ -252,6 +252,10 @@ export const reopenOpportunity = async (id: string, toStage: string): Promise<vo
 export interface ClinicSettings {
   stage_labels: Record<string, string>
   credentialed_operators: string[]
+  business_hours_start: string
+  business_hours_end: string
+  sla_minutes: number
+  alert_recipient: string
 }
 
 export const getClinicSettings = async (): Promise<ClinicSettings> => {
@@ -262,6 +266,10 @@ export const getClinicSettings = async (): Promise<ClinicSettings> => {
     return {
       stage_labels: (rec.stage_labels as unknown as ClinicSettings['stage_labels']) || {},
       credentialed_operators: (rec.credentialed_operators as unknown as string[]) || [],
+      business_hours_start: (rec.get('business_hours_start') as string) || '',
+      business_hours_end: (rec.get('business_hours_end') as string) || '',
+      sla_minutes: (rec.get('sla_minutes') as number) || 0,
+      alert_recipient: (rec.get('alert_recipient') as string) || '',
     }
   } catch (error) {
     throw new Error(getErrorMessage(error))
@@ -276,6 +284,10 @@ export const updateClinicSettings = async (data: ClinicSettings): Promise<void> 
     await pb.collection('clinic_settings').update(rec.id, {
       stage_labels: JSON.stringify(data.stage_labels),
       credentialed_operators: JSON.stringify(data.credentialed_operators),
+      business_hours_start: data.business_hours_start || '',
+      business_hours_end: data.business_hours_end || '',
+      sla_minutes: Number(data.sla_minutes) || 0,
+      alert_recipient: data.alert_recipient || '',
     })
   } catch (error) {
     throw new Error(getErrorMessage(error))

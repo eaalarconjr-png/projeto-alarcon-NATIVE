@@ -15,6 +15,7 @@ export default function Layout() {
     { to: '/contatos/novo', label: 'Novo contato', gestor: true },
     { to: '/convenios', label: 'Convênios', gestor: false },
     { to: '/regras', label: 'Qualificação', gestor: false },
+    { to: '/fila', label: 'Fila', gestor: false },
     { to: '/formularios', label: 'Formulários', gestor: true },
     { to: '/configuracoes', label: 'Configuração', gestor: true },
   ].filter((item) => !isGestor || item.gestor)
