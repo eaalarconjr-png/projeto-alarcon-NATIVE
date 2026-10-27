@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-27T12:45:02.107Z",
+  "generatedAt": "2026-10-27T12:53:28.125Z",
   "collections": [
     {
       "name": "users",
@@ -742,6 +742,85 @@
       ],
       "indexes": [
         "CREATE INDEX idx_qrv_status ON qualification_rule_versions (status)"
+      ]
+    },
+    {
+      "name": "qualifications",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": null,
+        "update": null,
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "opportunity",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "opportunities"
+        },
+        {
+          "name": "rule_version",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "qualification_rule_versions"
+        },
+        {
+          "name": "state",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "completa",
+            "incompleta",
+            "nao_configurada"
+          ]
+        },
+        {
+          "name": "score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "explanation",
+          "type": "json",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "evaluated_by",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_qualifications_opportunity ON qualifications (opportunity)"
       ]
     }
   ]

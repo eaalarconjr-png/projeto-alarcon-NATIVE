@@ -17,6 +17,12 @@ import {
   type HistoryEntry,
   type Opportunity,
 } from '@/services/crm'
+import {
+  evaluateOpportunity,
+  listQualifications,
+  type EvaluationResult,
+  type QualificationRecord,
+} from '@/services/qualificacao-avaliacao'
 
 const STAGES = [
   { value: 'novo', label: 'Novo' },
@@ -82,6 +88,35 @@ export default function FichaPage() {
   const [savingStep, setSavingStep] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
+  // Qualificação (AL-F2-02): avaliações explicáveis da oportunidade.
+  const [quals, setQuals] = useState<QualificationRecord[]>([])
+  const [evaluating, setEvaluating] = useState(false)
+  const [evalError, setEvalError] = useState<string | null>(null)
+  const [lastEval, setLastEval] = useState<EvaluationResult | null>(null)
+
+  const loadQuals = async (opportunityId: string) => {
+    try {
+      setQuals(await listQualifications(opportunityId))
+    } catch {
+      setQuals([])
+    }
+  }
+
+  const runEvaluation = async () => {
+    if (!id) return
+    setEvalError(null)
+    setEvaluating(true)
+    try {
+      const result = await evaluateOpportunity(id)
+      setLastEval(result)
+      await loadQuals(id)
+    } catch (e) {
+      setEvalError(e instanceof Error ? e.message : 'Não foi possível avaliar a oportunidade.')
+    } finally {
+      setEvaluating(false)
+    }
+  }
+
   const refresh = async () => {
     if (!id) return
     try {
@@ -128,6 +163,7 @@ export default function FichaPage() {
       .then(async ([op, hist]) => {
         setOpportunity(op)
         setHistory(hist)
+        loadQuals(id)
         try {
           setContact(await getContact(op.contact))
         } catch {
@@ -317,6 +353,71 @@ export default function FichaPage() {
             <p className="text-sm text-destructive" role="alert">
               {actionError}
             </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Qualificação</CardTitle>
+          <CardDescription>
+            Nota explicável pela regra aprovada. Nota baixa não arquiva nem bloqueia — quem decide é
+            a equipe.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={runEvaluation} disabled={evaluating}>
+              {evaluating ? 'Avaliando…' : 'Avaliar com a regra ativa'}
+            </Button>
+            {lastEval?.state === 'nao_configurada' && (
+              <span className="text-sm text-muted-foreground">
+                Nenhuma regra ativa — o score não está configurado.
+              </span>
+            )}
+          </div>
+          {evalError && (
+            <p className="text-sm text-destructive" role="alert">
+              {evalError}
+            </p>
+          )}
+          {quals.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma avaliação registrada. Clique em “Avaliar com a regra ativa”.
+            </p>
+          ) : (
+            <ol className="space-y-3">
+              {quals.map((q) => (
+                <li key={q.id} className="rounded-md border border-border p-3">
+                  <p className="text-sm font-medium">
+                    Nota {q.score}
+                    {q.expand?.rule_version?.version_number
+                      ? ` · regra v${q.expand.rule_version.version_number}`
+                      : ''}
+                    {q.state === 'incompleta' ? ' · incompleta (há critério sem dado)' : ''}
+                    {q.state === 'nao_configurada' ? ' · sem regra ativa' : ''}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {q.expand?.evaluated_by?.name ?? 'Equipe'} ·{' '}
+                    {new Date(q.created).toLocaleString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                  <ul className="mt-2 space-y-1 text-xs">
+                    {q.explanation.map((x, i) => (
+                      <li key={i} className="text-muted-foreground">
+                        {x.status === 'atingido' ? '✓' : x.status === 'sem_dado' ? '·' : '✗'}{' '}
+                        <span className="font-medium text-foreground">{x.label}</span> — {x.motivo}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ol>
           )}
         </CardContent>
       </Card>
