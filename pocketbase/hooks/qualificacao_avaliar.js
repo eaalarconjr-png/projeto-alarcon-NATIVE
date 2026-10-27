@@ -162,18 +162,26 @@ routerAdd(
       return e.badRequestError('Nenhum perfil ativo com critérios válidos.')
     }
 
-    // 4. ranking: aderência primeiro; peso estratégico desempata
-    results.sort((a, b) => {
+    // 4. ranking SÓ entre perfis com dado completo: ausente não é zero, então perfil que
+    // depende de um dado não lançado não pode ser tratado como "menos pretendido".
+    const complete = results.filter((r) => r.state === 'completa')
+    complete.sort((a, b) => {
       if (b.fit_pct !== a.fit_pct) return b.fit_pct - a.fit_pct
       if (b.strategic_weight !== a.strategic_weight) return b.strategic_weight - a.strategic_weight
       return b.score - a.score
     })
-    results.forEach((r, i) => {
+    complete.forEach((r, i) => {
       r.rank = i + 1
     })
+    results.sort((a, b) => {
+      const ra = a.rank || 999
+      const rb = b.rank || 999
+      if (ra !== rb) return ra - rb
+      return b.strategic_weight - a.strategic_weight
+    })
 
-    const best = results[0]
-    const worst = results[results.length - 1]
+    const best = complete.length ? complete[0] : results[0]
+    const worst = complete.length ? complete[complete.length - 1] : results[results.length - 1]
 
     // 5. registra a avaliação (imutável; recalcular cria outra)
     const rec = new Record($app.findCollectionByNameOrId('qualifications'))
@@ -196,9 +204,10 @@ routerAdd(
       rule_version: best.rule_version,
       best_profile_name: best.profile_name,
       best_fit_pct: best.fit_pct,
-      worst_profile_name: results.length > 1 ? worst.profile_name : worst.profile_name,
-      worst_fit_pct: results.length > 1 ? worst.fit_pct : worst.fit_pct,
+      worst_profile_name: complete.length > 1 ? worst.profile_name : '',
+      worst_fit_pct: complete.length > 1 ? worst.fit_pct : null,
       fit_pct: best.fit_pct,
+      complete_profiles: complete.length,
       results,
     })
   },

@@ -508,16 +508,24 @@ export default function FichaPage() {
                             className="flex justify-between gap-2 text-muted-foreground"
                           >
                             <span>
-                              {r.rank}º {r.profile_name}
+                              {r.state === 'incompleta' ? '—' : `${r.rank}º`} {r.profile_name}
                               <span className="opacity-70">
                                 {' '}
                                 · peso estratégico {r.strategic_weight}
                               </span>
                             </span>
-                            <span className="tabular-nums">{r.fit_pct}%</span>
+                            <span className="tabular-nums">
+                              {r.state === 'incompleta' ? 'sem dado' : `${r.fit_pct}%`}
+                            </span>
                           </li>
                         ))}
                       </ol>
+                      {q.results.some((r) => r.state === 'incompleta') && (
+                        <p className="text-xs text-muted-foreground">
+                          Perfil “sem dado” depende de informação ainda não lançada — não é o menos
+                          pretendido, apenas não pôde ser julgado.
+                        </p>
+                      )}
                     </div>
                   )}
                 </li>
