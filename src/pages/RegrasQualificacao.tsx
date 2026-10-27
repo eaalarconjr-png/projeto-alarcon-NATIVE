@@ -63,6 +63,7 @@ export default function RegrasQualificacaoPage() {
   const [targetNotes, setTargetNotes] = useState('')
   const [criteria, setCriteria] = useState<RuleCriterion[]>([emptyCriterion()])
   const [editingWeight, setEditingWeight] = useState<Record<string, number>>({})
+  const [editingName, setEditingName] = useState<Record<string, string>>({})
   const isAdmin = getCurrentUser()?.role === 'admin'
 
   const load = async () => {
@@ -147,18 +148,23 @@ export default function RegrasQualificacaoPage() {
     }
   }
 
-  const saveWeight = async (id: string, value: number) => {
+  const saveProfile = async (id: string, name: string, weight: number) => {
     setError(null)
     try {
-      await updateRuleVersion(id, { strategicWeight: value })
+      await updateRuleVersion(id, { profileName: name, strategicWeight: weight })
       setEditingWeight((prev) => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
+      setEditingName((prev) => {
         const next = { ...prev }
         delete next[id]
         return next
       })
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Não foi possível salvar o peso do perfil.')
+      setError(e instanceof Error ? e.message : 'Não foi possível salvar o perfil.')
     }
   }
 
@@ -398,45 +404,57 @@ export default function RegrasQualificacaoPage() {
                   ))}
                 </ul>
                 {isAdmin && (
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <div className="flex flex-wrap items-end gap-2 pt-1">
+                    <div className="flex items-center gap-1">
+                      <Label htmlFor={`n-${v.id}`} className="text-xs">
+                        Nome
+                      </Label>
+                      <Input
+                        id={`n-${v.id}`}
+                        className="h-8 w-44"
+                        value={editingName[v.id] ?? v.profile_name ?? ''}
+                        onChange={(e) =>
+                          setEditingName((prev) => ({ ...prev, [v.id]: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Label htmlFor={`w-${v.id}`} className="text-xs">
+                        Peso
+                      </Label>
+                      <Input
+                        id={`w-${v.id}`}
+                        type="number"
+                        min={1}
+                        className="h-8 w-20"
+                        value={editingWeight[v.id] ?? v.strategic_weight}
+                        onChange={(e) =>
+                          setEditingWeight((prev) => ({ ...prev, [v.id]: Number(e.target.value) }))
+                        }
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          saveProfile(
+                            v.id,
+                            editingName[v.id] ?? v.profile_name ?? '',
+                            editingWeight[v.id] ?? v.strategic_weight,
+                          )
+                        }
+                      >
+                        Salvar
+                      </Button>
+                    </div>
                     {v.status === 'rascunho' && (
                       <Button size="sm" onClick={() => activate(v)} disabled={saving}>
                         Ativar perfil
                       </Button>
                     )}
                     {v.status === 'ativo' && (
-                      <>
-                        <div className="flex items-center gap-1">
-                          <Label htmlFor={`w-${v.id}`} className="text-xs">
-                            Peso
-                          </Label>
-                          <Input
-                            id={`w-${v.id}`}
-                            type="number"
-                            min={1}
-                            className="h-8 w-20"
-                            value={editingWeight[v.id] ?? v.strategic_weight}
-                            onChange={(e) =>
-                              setEditingWeight((prev) => ({
-                                ...prev,
-                                [v.id]: Number(e.target.value),
-                              }))
-                            }
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              saveWeight(v.id, editingWeight[v.id] ?? v.strategic_weight)
-                            }
-                          >
-                            Salvar peso
-                          </Button>
-                        </div>
-                        <Button size="sm" variant="outline" onClick={() => archive(v.id)}>
-                          Desativar
-                        </Button>
-                      </>
+                      <Button size="sm" variant="outline" onClick={() => archive(v.id)}>
+                        Desativar
+                      </Button>
                     )}
                   </div>
                 )}
