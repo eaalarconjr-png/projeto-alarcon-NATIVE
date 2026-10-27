@@ -34,7 +34,7 @@ migrate(
     // 3. a avaliação passa a guardar o comparativo entre todos os perfis ativos
     const quals = app.findCollectionByNameOrId('qualifications')
     if (!quals.fields.getByName('results')) {
-      quals.fields.add(new JsonField({ name: 'results', maxSize: 60000 }))
+      quals.fields.add(new JSONField({ name: 'results', maxSize: 60000 }))
     }
     if (!quals.fields.getByName('best_profile_name')) {
       quals.fields.add(new TextField({ name: 'best_profile_name', max: 120 }))
