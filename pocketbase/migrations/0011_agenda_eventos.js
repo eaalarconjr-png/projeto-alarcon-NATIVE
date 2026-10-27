@@ -58,12 +58,6 @@ migrate(
           collectionId: usersId,
           maxSelect: 1,
         },
-        {
-          name: 'replaces',
-          type: 'relation',
-          collectionId: 'agenda_events',
-          maxSelect: 1,
-        },
       ],
       indexes: [
         'CREATE INDEX idx_agenda_events_opportunity ON agenda_events (opportunity)',
@@ -73,6 +67,11 @@ migrate(
     events.fields.add(new AutodateField({ name: 'created', onCreate: true, onUpdate: false }))
     events.fields.add(new AutodateField({ name: 'updated', onCreate: true, onUpdate: true }))
     app.save(events)
+
+    // autorreferência (remarcação) só depois da coleção existir
+    const saved = app.findCollectionByNameOrId('agenda_events')
+    saved.fields.add(new RelationField({ name: 'replaces', collectionId: saved.id, maxSelect: 1 }))
+    app.save(saved)
   },
   (app) => {
     try {
