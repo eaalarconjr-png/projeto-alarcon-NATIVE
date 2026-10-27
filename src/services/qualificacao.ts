@@ -160,7 +160,11 @@ export const createRuleVersion = async (
     const last = await pb.collection('qualification_rule_versions').getList(1, 1, {
       sort: '-version_number',
     })
-    const next = last.items.length ? Number(last.items[0].get('version_number')) + 1 : 1
+    // PocketBase v0.36: registros são objetos simples — ler como propriedade, nunca .get()
+    const lastNumber = last.items.length
+      ? Number((last.items[0] as unknown as { version_number: number }).version_number)
+      : 0
+    const next = Number.isFinite(lastNumber) && lastNumber > 0 ? lastNumber + 1 : 1
     const rec = await pb.collection('qualification_rule_versions').create({
       version_number: next,
       status: 'rascunho',
@@ -182,7 +186,7 @@ export const activateRuleVersion = async (id: string): Promise<void> => {
   let criteriaCount = 0
   try {
     const target = await pb.collection('qualification_rule_versions').getOne(id)
-    criteriaCount = parseCriteria(target.get('criteria')).length
+    criteriaCount = parseCriteria((target as unknown as { criteria: unknown }).criteria).length
   } catch (error) {
     throw new Error(getErrorMessage(error))
   }

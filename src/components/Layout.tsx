@@ -16,6 +16,7 @@ export default function Layout() {
     { to: '/convenios', label: 'Convênios', gestor: false },
     { to: '/regras', label: 'Qualificação', gestor: false },
     { to: '/fila', label: 'Fila', gestor: false },
+    { to: '/agenda', label: 'Agenda', gestor: false },
     { to: '/formularios', label: 'Formulários', gestor: true },
     { to: '/configuracoes', label: 'Configuração', gestor: true },
   ].filter((item) => !isGestor || item.gestor)

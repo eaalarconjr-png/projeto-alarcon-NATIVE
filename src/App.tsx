@@ -18,6 +18,7 @@ import FormularioPublicoPage from './pages/FormularioPublico'
 import ConveniosPage from './pages/Convenios'
 import RegrasQualificacaoPage from './pages/RegrasQualificacao'
 import FilaPage from './pages/Fila'
+import AgendaPage from './pages/Agenda'
 import RequireAuth from './components/RequireAuth'
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
@@ -77,6 +78,14 @@ const App = () => (
             element={
               <RequireAuth>
                 <FilaPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/agenda"
+            element={
+              <RequireAuth>
+                <AgendaPage />
               </RequireAuth>
             }
           />

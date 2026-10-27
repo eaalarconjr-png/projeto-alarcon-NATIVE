@@ -36,6 +36,7 @@ export interface AgendaEvent {
   expand?: {
     registered_by?: { name: string }
     confirmed_by?: { name: string }
+    opportunity?: { interest?: string; expand?: { contact?: { name?: string } } }
   }
 }
 
@@ -45,6 +46,19 @@ export const listAgendaEvents = async (opportunityId: string): Promise<AgendaEve
       filter: pb.filter('opportunity = {:o}', { o: opportunityId }),
       sort: '-event_at',
       expand: 'registered_by,confirmed_by',
+    })
+    return list.items as unknown as AgendaEvent[]
+  } catch (error) {
+    throw new Error(getErrorMessage(error))
+  }
+}
+
+/** Agenda geral da clínica (pedido do Dr., 27/10): todos os eventos, com o paciente. */
+export const listAllAgendaEvents = async (): Promise<AgendaEvent[]> => {
+  try {
+    const list = await pb.collection('agenda_events').getList(1, 200, {
+      sort: '-event_at',
+      expand: 'registered_by,confirmed_by,opportunity,opportunity.contact',
     })
     return list.items as unknown as AgendaEvent[]
   } catch (error) {

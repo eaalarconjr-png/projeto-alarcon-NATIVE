@@ -259,11 +259,19 @@ export default function FichaPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Ficha da oportunidade</h1>
-        <Button asChild variant="outline">
-          <Link to="/">Voltar</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <a href="#qualificacao">Avaliação explicável</a>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <a href="#agenda">Agenda</a>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/">Voltar</Link>
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -411,7 +419,7 @@ export default function FichaPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="qualificacao">
         <CardHeader>
           <CardTitle className="text-base">Qualificação</CardTitle>
           <CardDescription>
@@ -476,7 +484,7 @@ export default function FichaPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="agenda">
         <CardHeader>
           <CardTitle className="text-base">Agenda e eventos confirmados</CardTitle>
           <CardDescription>
