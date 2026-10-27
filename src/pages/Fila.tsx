@@ -11,6 +11,7 @@ import {
   declareHumanResponse,
   listAlerts,
   listServiceItems,
+  setItemAssignee,
   setItemStatus,
   setWaitingHuman,
   takeServiceItem,
@@ -343,6 +344,27 @@ export default function FilaPage() {
                     {isOverdue(item) ? ' (atrasado)' : ''}
                   </span>
                 </p>
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="min-w-48 flex-1 space-y-1">
+                    <Label htmlFor={`assignee-${item.id}`}>Responsável</Label>
+                    <select
+                      id={`assignee-${item.id}`}
+                      value={item.assignee || ''}
+                      onChange={(e) =>
+                        runAction(item.id, () => setItemAssignee(item.id, e.target.value))
+                      }
+                      disabled={busyId === item.id}
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    >
+                      <option value="">Sem responsável (remover)</option>
+                      {team.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Primeira ação no CRM: {fmtDateTime(item.first_action_at)} · Primeira resposta
                   declarada ao paciente: {fmtDateTime(item.first_human_response_at)}

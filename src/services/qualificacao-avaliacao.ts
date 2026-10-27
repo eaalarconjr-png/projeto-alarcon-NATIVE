@@ -54,7 +54,8 @@ export const listQualifications = async (opportunityId: string): Promise<Qualifi
     return list.items.map((r) => {
       const base = r as unknown as QualificationRecord
       let explanation: ExplanationItem[] = []
-      const raw = r.get('explanation')
+      // PocketBase v0.36 devolve campo json já como objeto/array — sem .get()
+      const raw = (r as unknown as { explanation: unknown }).explanation
       if (Array.isArray(raw)) explanation = raw as ExplanationItem[]
       else if (typeof raw === 'string' && raw.trim()) {
         try {

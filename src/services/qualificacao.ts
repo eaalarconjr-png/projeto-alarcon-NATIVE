@@ -134,7 +134,8 @@ export const listRuleVersions = async (): Promise<QualificationRuleVersion[]> =>
     })
     return list.items.map((r) => {
       const base = r as unknown as QualificationRuleVersion
-      return { ...base, criteria: parseCriteria(r.get('criteria')) }
+      // PocketBase v0.36 devolve campo json já como objeto/array — sem .get()
+      return { ...base, criteria: parseCriteria((r as unknown as { criteria: unknown }).criteria) }
     })
   } catch (error) {
     throw new Error(getErrorMessage(error))

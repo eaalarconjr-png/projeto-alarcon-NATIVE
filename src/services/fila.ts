@@ -112,6 +112,18 @@ export const takeServiceItem = async (id: string): Promise<void> => {
   }
 }
 
+/** Troca ou remove o responsável do item (pedido do cliente, 27/10). */
+export const setItemAssignee = async (id: string, assignee: string): Promise<void> => {
+  try {
+    await pb.collection('service_items').update(id, {
+      assignee: assignee || '',
+      last_activity_at: nowIso(),
+    })
+  } catch (error) {
+    throw new Error(getErrorMessage(error))
+  }
+}
+
 export const setItemStatus = async (id: string, status: ServiceItemStatus): Promise<void> => {
   try {
     await pb.collection('service_items').update(id, {
