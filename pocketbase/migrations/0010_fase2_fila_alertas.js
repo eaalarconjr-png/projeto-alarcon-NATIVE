@@ -86,23 +86,21 @@ migrate(
     app.save(alerts)
 
     // 3. clinic_settings: horário de funcionamento, prazo útil e destinatário dos alertas
+    // (campos em coleção existente exigem construtores tipados)
     const settings = app.findCollectionByNameOrId('clinic_settings')
     if (!settings.fields.getByName('business_hours_start')) {
-      settings.fields.add({ name: 'business_hours_start', type: 'text', max: 5 })
+      settings.fields.add(new TextField({ name: 'business_hours_start', max: 5 }))
     }
     if (!settings.fields.getByName('business_hours_end')) {
-      settings.fields.add({ name: 'business_hours_end', type: 'text', max: 5 })
+      settings.fields.add(new TextField({ name: 'business_hours_end', max: 5 }))
     }
     if (!settings.fields.getByName('sla_minutes')) {
-      settings.fields.add({ name: 'sla_minutes', type: 'number', onlyInt: true })
+      settings.fields.add(new NumberField({ name: 'sla_minutes', onlyInt: true }))
     }
     if (!settings.fields.getByName('alert_recipient')) {
-      settings.fields.add({
-        name: 'alert_recipient',
-        type: 'relation',
-        collectionId: usersId,
-        maxSelect: 1,
-      })
+      settings.fields.add(
+        new RelationField({ name: 'alert_recipient', collectionId: usersId, maxSelect: 1 }),
+      )
     }
     app.save(settings)
   },

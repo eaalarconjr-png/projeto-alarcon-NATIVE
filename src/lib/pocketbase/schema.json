@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-27T12:53:28.125Z",
+  "generatedAt": "2026-10-27T13:00:26.999Z",
   "collections": [
     {
       "name": "users",
@@ -29,21 +29,30 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "role",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["admin", "atendimento", "gestor_trafego"]
+          "selectValues": [
+            "admin",
+            "atendimento",
+            "gestor_trafego"
+          ]
         }
       ],
       "indexes": [
@@ -85,24 +94,37 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["whatsapp", "site", "indicacao", "convenio_app", "outro"]
+          "selectValues": [
+            "whatsapp",
+            "site",
+            "indicacao",
+            "convenio_app",
+            "outro"
+          ]
         },
         {
           "name": "created",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_contacts_phone ON contacts (phone)"]
+      "indexes": [
+        "CREATE INDEX idx_contacts_phone ON contacts (phone)"
+      ]
     },
     {
       "name": "opportunities",
@@ -133,7 +155,11 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["particular", "convenio", "reembolso"]
+          "selectValues": [
+            "particular",
+            "convenio",
+            "reembolso"
+          ]
         },
         {
           "name": "owner",
@@ -161,7 +187,10 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["aberta", "encerrada"]
+          "selectValues": [
+            "aberta",
+            "encerrada"
+          ]
         },
         {
           "name": "close_reason",
@@ -206,14 +235,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
       "indexes": [
@@ -286,17 +320,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_stage_history_opportunity ON stage_history (opportunity)"]
+      "indexes": [
+        "CREATE INDEX idx_stage_history_opportunity ON stage_history (opportunity)"
+      ]
     },
     {
       "name": "clinic_settings",
@@ -339,17 +380,49 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        },
+        {
+          "name": "business_hours_start",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "business_hours_end",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "alert_recipient",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
         }
       ],
-      "indexes": ["CREATE UNIQUE INDEX idx_clinic_settings_key ON clinic_settings (settings_key)"]
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_clinic_settings_key ON clinic_settings (settings_key)"
+      ]
     },
     {
       "name": "forms",
@@ -373,21 +446,30 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["rascunho", "publicado", "desativado"]
+          "selectValues": [
+            "rascunho",
+            "publicado",
+            "desativado"
+          ]
         },
         {
           "name": "created",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
       "indexes": []
@@ -427,7 +509,11 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["rascunho", "publicada", "desativada"]
+          "selectValues": [
+            "rascunho",
+            "publicada",
+            "desativada"
+          ]
         },
         {
           "name": "published_at",
@@ -447,17 +533,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_form_versions_form ON form_versions (form)"]
+      "indexes": [
+        "CREATE INDEX idx_form_versions_form ON form_versions (form)"
+      ]
     },
     {
       "name": "submissions",
@@ -521,17 +614,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE UNIQUE INDEX idx_submissions_key ON submissions (submission_key)"]
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_submissions_key ON submissions (submission_key)"
+      ]
     },
     {
       "name": "insurance_plans",
@@ -555,7 +655,12 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["credenciado", "reembolso", "particular", "revisao"]
+          "selectValues": [
+            "credenciado",
+            "reembolso",
+            "particular",
+            "revisao"
+          ]
         },
         {
           "name": "notes",
@@ -568,17 +673,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_insurance_plans_name ON insurance_plans (name)"]
+      "indexes": [
+        "CREATE INDEX idx_insurance_plans_name ON insurance_plans (name)"
+      ]
     },
     {
       "name": "qualification_rule_versions",
@@ -602,7 +714,11 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["rascunho", "ativo", "arquivado"]
+          "selectValues": [
+            "rascunho",
+            "ativo",
+            "arquivado"
+          ]
         },
         {
           "name": "criteria",
@@ -634,17 +750,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_qrv_status ON qualification_rule_versions (status)"]
+      "indexes": [
+        "CREATE INDEX idx_qrv_status ON qualification_rule_versions (status)"
+      ]
     },
     {
       "name": "qualifications",
@@ -676,7 +799,11 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["completa", "incompleta", "nao_configurada"]
+          "selectValues": [
+            "completa",
+            "incompleta",
+            "nao_configurada"
+          ]
         },
         {
           "name": "score",
@@ -702,17 +829,209 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_qualifications_opportunity ON qualifications (opportunity)"]
+      "indexes": [
+        "CREATE INDEX idx_qualifications_opportunity ON qualifications (opportunity)"
+      ]
+    },
+    {
+      "name": "service_items",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "update": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "opportunity",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "opportunities"
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "assignee",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "next_action",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "deadline_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "pendente",
+            "em_andamento",
+            "concluido",
+            "cancelado"
+          ]
+        },
+        {
+          "name": "waiting_human",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "first_action_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "first_human_response_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "first_human_response_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "last_activity_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_service_items_status ON service_items (status)",
+        "CREATE INDEX idx_service_items_opportunity ON service_items (opportunity)"
+      ]
+    },
+    {
+      "name": "internal_alerts",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": null,
+        "update": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "item",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "service_items"
+        },
+        {
+          "name": "violation",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "message",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "recipient",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "acknowledged_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "acknowledged_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_internal_alerts_item ON internal_alerts (item)"
+      ]
     }
   ]
 }
