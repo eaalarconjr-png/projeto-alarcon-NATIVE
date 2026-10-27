@@ -444,12 +444,12 @@ export default function FichaPage() {
                 Perfil mais pretendido: {lastEval.best_profile_name} · {lastEval.best_fit_pct ?? 0}%
                 de aderência
               </p>
-              {lastEval.results.length > 1 && (
+              {lastEval.worst_profile_name ? (
                 <p className="text-xs text-muted-foreground">
-                  Menos pretendido: {lastEval.results[lastEval.results.length - 1].profile_name} ·{' '}
-                  {lastEval.results[lastEval.results.length - 1].fit_pct}% de aderência
+                  Menos pretendido: {lastEval.worst_profile_name} · {lastEval.worst_fit_pct ?? 0}%
+                  de aderência
                 </p>
-              )}
+              ) : null}
             </div>
           )}
           {evalError && (
