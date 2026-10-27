@@ -35,20 +35,20 @@ cronAdd('fila_alertas_atraso', '*/5 * * * *', () => {
   // 2. itens abertos com prazo vencido (ou SLA configurado quando não há prazo manual)
   const items = $app.findRecordsByFilter(
     'service_items',
-    'status = "pendente" || status = "em_andamento"',
+    "status = 'pendente' || status = 'em_andamento'",
     '',
     200,
     0,
   )
   for (const item of items) {
     let deadlineMs = 0
-    const rawDeadline = String(item.get('deadline_at') || '')
+    const rawDeadline = item.getString('deadline_at')
     if (rawDeadline) {
       const parsed = new Date(rawDeadline.replace(' ', 'T'))
       if (isNaN(parsed.getTime())) continue
       deadlineMs = parsed.getTime()
     } else if (sla > 0) {
-      const rawCreated = String(item.get('created') || '')
+      const rawCreated = item.getString('created')
       const parsedCreated = new Date(rawCreated.replace(' ', 'T'))
       if (isNaN(parsedCreated.getTime())) continue
       deadlineMs = parsedCreated.getTime() + sla * 60000
