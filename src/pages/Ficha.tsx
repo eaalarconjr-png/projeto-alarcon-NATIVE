@@ -23,6 +23,18 @@ import {
   type EvaluationResult,
   type QualificationRecord,
 } from '@/services/qualificacao-avaliacao'
+import {
+  AGENDA_STATUS_LABELS,
+  AGENDA_TYPE_LABELS,
+  cancelEvent,
+  confirmEvent,
+  createAgendaEvent,
+  listAgendaEvents,
+  markPerformed,
+  rescheduleEvent,
+  type AgendaEvent,
+  type AgendaType,
+} from '@/services/agenda'
 
 const STAGES = [
   { value: 'novo', label: 'Novo' },
@@ -94,6 +106,47 @@ export default function FichaPage() {
   const [evalError, setEvalError] = useState<string | null>(null)
   const [lastEval, setLastEval] = useState<EvaluationResult | null>(null)
 
+  // Agenda (AL-F2-04): eventos lançados pela equipe; solicitação não é confirmação.
+  const [events, setEvents] = useState<AgendaEvent[]>([])
+  const [evType, setEvType] = useState<AgendaType>('consulta')
+  const [evAt, setEvAt] = useState('')
+  const [evSource, setEvSource] = useState('')
+  const [evNote, setEvNote] = useState('')
+  const [evError, setEvError] = useState<string | null>(null)
+  const [evSaving, setEvSaving] = useState(false)
+
+  const loadEvents = async (opportunityId: string) => {
+    try {
+      setEvents(await listAgendaEvents(opportunityId))
+    } catch {
+      setEvents([])
+    }
+  }
+
+  const runEventAction = async (action: () => Promise<unknown>) => {
+    setEvError(null)
+    setEvSaving(true)
+    try {
+      await action()
+      if (id) await loadEvents(id)
+    } catch (e) {
+      setEvError(e instanceof Error ? e.message : 'Não foi possível concluir a ação.')
+    } finally {
+      setEvSaving(false)
+    }
+  }
+
+  const submitEvent = () =>
+    runEventAction(() =>
+      createAgendaEvent({
+        opportunity: id ?? '',
+        type: evType,
+        event_at: evAt ? new Date(evAt).toISOString() : '',
+        source: evSource,
+        note: evNote,
+      }),
+    )
+
   const loadQuals = async (opportunityId: string) => {
     try {
       setQuals(await listQualifications(opportunityId))
@@ -164,6 +217,7 @@ export default function FichaPage() {
         setOpportunity(op)
         setHistory(hist)
         loadQuals(id)
+        loadEvents(id)
         try {
           setContact(await getContact(op.contact))
         } catch {
@@ -415,6 +469,158 @@ export default function FichaPage() {
                       </li>
                     ))}
                   </ul>
+                </li>
+              ))}
+            </ol>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Agenda e eventos confirmados</CardTitle>
+          <CardDescription>
+            Lançamento manual pela equipe — a agenda clínica oficial continua sendo a fonte.
+            Solicitação não é confirmação; quem confirmou fica registrado.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-4">
+            <div className="space-y-1">
+              <Label htmlFor="ev-type">Tipo</Label>
+              <select
+                id="ev-type"
+                value={evType}
+                onChange={(e) => setEvType(e.target.value as AgendaType)}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+              >
+                <option value="consulta">Consulta</option>
+                <option value="cirurgia">Cirurgia</option>
+                <option value="alta">Alta</option>
+                <option value="resultado_comercial">Resultado comercial</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ev-at">Data e hora *</Label>
+              <Input
+                id="ev-at"
+                type="datetime-local"
+                value={evAt}
+                onChange={(e) => setEvAt(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ev-source">Fonte</Label>
+              <Input
+                id="ev-source"
+                value={evSource}
+                onChange={(e) => setEvSource(e.target.value)}
+                placeholder="Ex.: recepcionista informou"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ev-note">Observação</Label>
+              <Input
+                id="ev-note"
+                value={evNote}
+                onChange={(e) => setEvNote(e.target.value)}
+                placeholder="Opcional"
+              />
+            </div>
+          </div>
+          <Button onClick={submitEvent} disabled={evSaving}>
+            {evSaving ? 'Registrando…' : 'Registrar evento'}
+          </Button>
+          {evError && (
+            <p className="text-sm text-destructive" role="alert">
+              {evError}
+            </p>
+          )}
+          {events.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum evento registrado.</p>
+          ) : (
+            <ol className="space-y-2">
+              {events.map((ev) => (
+                <li key={ev.id} className="rounded-md border border-border p-3 text-sm">
+                  <p className="font-medium">
+                    {AGENDA_TYPE_LABELS[ev.type]} ·{' '}
+                    {new Date(ev.event_at.replace(' ', 'T')).toLocaleString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                    {ev.replaces ? ' · remarcado de um evento anterior' : ''}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Status: {AGENDA_STATUS_LABELS[ev.status]} · Registrado por{' '}
+                    {ev.expand?.registered_by?.name ?? 'Equipe'}
+                    {ev.expand?.confirmed_by?.name
+                      ? ` · Confirmado por ${ev.expand.confirmed_by.name}`
+                      : ''}
+                    {ev.source ? ` · Fonte: ${ev.source}` : ''}
+                    {ev.note ? ` · ${ev.note}` : ''}
+                  </p>
+                  {ev.status === 'solicitado' && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={evSaving}
+                        onClick={() => runEventAction(() => confirmEvent(ev.id))}
+                      >
+                        Confirmar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={evSaving}
+                        onClick={() => {
+                          const nova = window.prompt('Nova data e hora (AAAA-MM-DD HH:MM):')
+                          if (nova) runEventAction(() => rescheduleEvent(ev.id, nova))
+                        }}
+                      >
+                        Remarcar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-destructive"
+                        disabled={evSaving}
+                        onClick={() => {
+                          if (window.confirm('Cancelar este evento? O histórico fica guardado.')) {
+                            runEventAction(() => cancelEvent(ev.id))
+                          }
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  )}
+                  {ev.status === 'confirmado' && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={evSaving}
+                        onClick={() => runEventAction(() => markPerformed(ev.id))}
+                      >
+                        Marcar realizado
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={evSaving}
+                        onClick={() => {
+                          const nova = window.prompt('Nova data e hora (AAAA-MM-DD HH:MM):')
+                          if (nova) runEventAction(() => rescheduleEvent(ev.id, nova))
+                        }}
+                      >
+                        Remarcar
+                      </Button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ol>
