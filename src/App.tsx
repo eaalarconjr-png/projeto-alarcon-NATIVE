@@ -15,6 +15,8 @@ import ConfiguracoesPage from './pages/Configuracoes'
 import FormulariosPage from './pages/Formularios'
 import FormEditorPage from './pages/FormEditor'
 import FormularioPublicoPage from './pages/FormularioPublico'
+import ConveniosPage from './pages/Convenios'
+import RegrasQualificacaoPage from './pages/RegrasQualificacao'
 import RequireAuth from './components/RequireAuth'
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
@@ -50,6 +52,22 @@ const App = () => (
             element={
               <RequireAuth>
                 <FichaPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/convenios"
+            element={
+              <RequireAuth>
+                <ConveniosPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/regras"
+            element={
+              <RequireAuth>
+                <RegrasQualificacaoPage />
               </RequireAuth>
             }
           />

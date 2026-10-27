@@ -1,18 +1,24 @@
 import { NavLink, Outlet } from 'react-router-dom'
-
-const navItems = [
-  { to: '/', label: 'Oportunidades' },
-  { to: '/contatos/novo', label: 'Novo contato' },
-  { to: '/formularios', label: 'Formulários' },
-  { to: '/configuracoes', label: 'Configuração' },
-]
+import { getCurrentUser } from '@/services/auth'
 
 /**
  * Layout com menu principal (correção do teste da fase 1: as telas existiam,
  * mas não havia navegação para alcançá-las). Login e formulário público ficam
- * fora deste menu, de propósito.
+ * fora deste menu, de propósito. A partir da fase 2, Convênios e Qualificação
+ * ficam escondidos do gestor de tráfego (SPEC: ele não vê ficha clínica).
  */
 export default function Layout() {
+  const role = getCurrentUser()?.role
+  const isGestor = role === 'gestor_trafego'
+  const navItems = [
+    { to: '/', label: 'Oportunidades', gestor: true },
+    { to: '/contatos/novo', label: 'Novo contato', gestor: true },
+    { to: '/convenios', label: 'Convênios', gestor: false },
+    { to: '/regras', label: 'Qualificação', gestor: false },
+    { to: '/formularios', label: 'Formulários', gestor: true },
+    { to: '/configuracoes', label: 'Configuração', gestor: true },
+  ].filter((item) => !isGestor || item.gestor)
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border bg-background">
