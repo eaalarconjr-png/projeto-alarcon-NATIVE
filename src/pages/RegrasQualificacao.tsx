@@ -9,6 +9,7 @@ import {
   activateRuleVersion,
   createRuleVersion,
   listRuleVersions,
+  updateRuleVersion,
   type QualificationRuleVersion,
   type RuleCriterion,
   type RuleSource,
@@ -45,9 +46,10 @@ const fmtDate = (iso: string) =>
     : '—'
 
 /**
- * Qualificação (AL-F2-01): regras versionadas com critérios, aprovador e data.
- * Ativação é aprovação do administrador; sem regra ativa, o score fica inativo
- * (SPEC AL-F2 — não inventar pesos nem cortes).
+ * Qualificação — PERFIS DE PACIENTE (pedido do Dr. Ernesto, 27/10).
+ * Vários perfis podem ficar ativos ao mesmo tempo. O peso estratégico diz qual perfil a clínica
+ * mais quer atrair; a avaliação do paciente (na ficha) compara todos e mostra o ranking.
+ * A nota só existe para perfil ativo e aprovado — nada é descartado automaticamente.
  */
 export default function RegrasQualificacaoPage() {
   const [versions, setVersions] = useState<QualificationRuleVersion[]>([])
@@ -56,7 +58,11 @@ export default function RegrasQualificacaoPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [notes, setNotes] = useState('')
+  const [profileName, setProfileName] = useState('')
+  const [strategicWeight, setStrategicWeight] = useState(10)
+  const [targetNotes, setTargetNotes] = useState('')
   const [criteria, setCriteria] = useState<RuleCriterion[]>([emptyCriterion()])
+  const [editingWeight, setEditingWeight] = useState<Record<string, number>>({})
   const isAdmin = getCurrentUser()?.role === 'admin'
 
   const load = async () => {
@@ -65,7 +71,7 @@ export default function RegrasQualificacaoPage() {
     try {
       setVersions(await listRuleVersions())
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Não foi possível carregar as regras.')
+      setError(e instanceof Error ? e.message : 'Não foi possível carregar os perfis.')
     } finally {
       setLoading(false)
     }
@@ -75,28 +81,39 @@ export default function RegrasQualificacaoPage() {
     load()
   }, [])
 
-  const activeVersion = versions.find((v) => v.status === 'ativo')
+  const activeProfiles = versions.filter((v) => v.status === 'ativo')
+  const rankedActive = [...activeProfiles].sort((a, b) => b.strategic_weight - a.strategic_weight)
 
   const submitDraft = async () => {
     setFormError(null)
     setSaving(true)
     try {
-      await createRuleVersion(criteria, notes)
+      await createRuleVersion({
+        criteria,
+        profileName,
+        strategicWeight,
+        targetNotes,
+        notes,
+      })
       setCriteria([emptyCriterion()])
       setNotes('')
+      setProfileName('')
+      setStrategicWeight(10)
+      setTargetNotes('')
       await load()
     } catch (e) {
-      setFormError(e instanceof Error ? e.message : 'Não foi possível salvar o rascunho.')
+      setFormError(e instanceof Error ? e.message : 'Não foi possível salvar o perfil.')
     } finally {
       setSaving(false)
     }
   }
 
-  const activate = async (id: string, versionNumber: number) => {
+  const activate = async (profile: QualificationRuleVersion) => {
     if (
       !window.confirm(
-        `Ativar a regra v${versionNumber}? A versão ativa anterior é arquivada e esta passa a valer ` +
-          'para as próximas qualificações, com seu nome e a data de hoje registrados como aprovação.',
+        `Ativar o perfil "${profile.profile_name}" (peso ${profile.strategic_weight})? ` +
+          'Ele passa a concorrer com os outros perfis ativos na avaliação dos pacientes. ' +
+          'Os perfis que já estão ativos continuam ativos.',
       )
     ) {
       return
@@ -104,10 +121,10 @@ export default function RegrasQualificacaoPage() {
     setError(null)
     setSaving(true)
     try {
-      await activateRuleVersion(id)
+      await activateRuleVersion(profile.id)
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Não foi possível ativar a regra.')
+      setError(e instanceof Error ? e.message : 'Não foi possível ativar o perfil.')
     } finally {
       setSaving(false)
     }
@@ -115,7 +132,9 @@ export default function RegrasQualificacaoPage() {
 
   const archive = async (id: string) => {
     if (
-      !window.confirm('Arquivar esta regra? Ela deixa de valer, mas o histórico fica guardado.')
+      !window.confirm(
+        'Desativar este perfil? Ele deixa de concorrer, mas o histórico fica guardado.',
+      )
     ) {
       return
     }
@@ -124,7 +143,22 @@ export default function RegrasQualificacaoPage() {
       await archiveRuleVersion(id)
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Não foi possível arquivar a regra.')
+      setError(e instanceof Error ? e.message : 'Não foi possível desativar o perfil.')
+    }
+  }
+
+  const saveWeight = async (id: string, value: number) => {
+    setError(null)
+    try {
+      await updateRuleVersion(id, { strategicWeight: value })
+      setEditingWeight((prev) => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível salvar o peso do perfil.')
     }
   }
 
@@ -135,36 +169,76 @@ export default function RegrasQualificacaoPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       <div>
-        <h1 className="text-xl font-semibold">Qualificação</h1>
+        <h1 className="text-xl font-semibold">Perfis de paciente</h1>
         <p className="text-sm text-muted-foreground">
-          Critérios que dizem se uma oportunidade adere ao padrão da clínica. A nota só existe com
-          regra ativa e aprovada — nada é descartado automaticamente.
+          Cada perfil descreve um tipo de paciente que a clínica quer atrair. Vários podem ficar
+          ativos ao mesmo tempo: na ficha, o sistema compara todos e mostra qual é o mais
+          pretendido. O peso estratégico define a prioridade entre eles.
         </p>
       </div>
 
-      {activeVersion ? (
-        <p
-          className="rounded-md bg-green-600/10 px-3 py-2 text-sm text-green-800 dark:text-green-300"
-          role="status"
-        >
-          Score ativo: v{activeVersion.version_number}, aprovada em{' '}
-          {fmtDate(activeVersion.approved_at)}.
-        </p>
+      {rankedActive.length > 0 ? (
+        <div className="space-y-2">
+          <p className="text-sm font-medium" role="status">
+            {rankedActive.length === 1
+              ? '1 perfil ativo. Ative outros para comparar prioridades.'
+              : `${rankedActive.length} perfis ativos — nesta ordem de prioridade:`}
+          </p>
+          <ol className="space-y-1 text-sm">
+            {rankedActive.map((p, i) => (
+              <li
+                key={p.id}
+                className="rounded-md bg-green-600/10 px-3 py-2 text-green-900 dark:text-green-300"
+              >
+                <span className="font-medium">
+                  {i + 1}º · {p.profile_name}
+                </span>{' '}
+                <span className="text-xs">· peso estratégico {p.strategic_weight}</span>
+                {p.target_notes ? (
+                  <span className="block text-xs opacity-80">{p.target_notes}</span>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        </div>
       ) : (
         <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground" role="status">
-          Score inativo: nenhuma regra ativa. Monte o rascunho e ative quando aprovar.
+          Nenhum perfil ativo. Monte o perfil e ative quando aprovar — o score fica inativo até lá.
         </p>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Novo rascunho de regra</CardTitle>
+          <CardTitle className="text-base">Novo perfil de paciente</CardTitle>
           <CardDescription>
-            Cada critério tem nome, peso, origem do dado e valor esperado. A explicação da nota usa
-            exatamente estes critérios.
+            Nomeie o perfil (ex.: “Particular · cirurgia eletiva”), dê o peso estratégico e defina
+            os critérios. A explicação da nota usa exatamente estes critérios.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="space-y-1 sm:col-span-2">
+              <Label htmlFor="profile-name">Nome do perfil *</Label>
+              <Input
+                id="profile-name"
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value)}
+                placeholder="Ex.: Cirurgia particular de vesícula"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="profile-weight">Peso estratégico *</Label>
+              <Input
+                id="profile-weight"
+                type="number"
+                min={1}
+                value={strategicWeight}
+                onChange={(e) => setStrategicWeight(Number(e.target.value))}
+              />
+              <p className="text-xs text-muted-foreground">Maior = mais pretendido.</p>
+            </div>
+          </div>
+
           {criteria.map((c, index) => (
             <div
               key={c.id}
@@ -237,13 +311,23 @@ export default function RegrasQualificacaoPage() {
           >
             Adicionar critério
           </Button>
+
           <div className="space-y-1">
-            <Label htmlFor="rule-notes">Observações da versão (opcional)</Label>
+            <Label htmlFor="profile-target">Como atrair este perfil (opcional)</Label>
+            <Input
+              id="profile-target"
+              value={targetNotes}
+              onChange={(e) => setTargetNotes(e.target.value)}
+              placeholder="Ex.: campanha no Google para vesícula particular em São Paulo"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="rule-notes">Observações do perfil (opcional)</Label>
             <Input
               id="rule-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ex.: aprovada na conversa com o Dr. Ernesto"
+              placeholder="Ex.: aprovado na conversa com o Dr. Ernesto"
             />
           </div>
           {formError && (
@@ -252,7 +336,7 @@ export default function RegrasQualificacaoPage() {
             </p>
           )}
           <Button onClick={submitDraft} disabled={saving}>
-            {saving ? 'Salvando…' : 'Salvar rascunho'}
+            {saving ? 'Salvando…' : 'Salvar perfil como rascunho'}
           </Button>
         </CardContent>
       </Card>
@@ -275,7 +359,7 @@ export default function RegrasQualificacaoPage() {
         <Card>
           <CardContent className="p-6 text-center">
             <p className="text-sm text-muted-foreground">
-              Nenhuma versão de regra ainda. O score fica inativo até a primeira ativação.
+              Nenhum perfil criado ainda. O score fica inativo até a primeira ativação.
             </p>
           </CardContent>
         </Card>
@@ -284,8 +368,8 @@ export default function RegrasQualificacaoPage() {
           {versions.map((v) => (
             <Card key={v.id}>
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  Versão {v.version_number}
+                <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+                  {v.profile_name || `Perfil v${v.version_number}`}
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[v.status] ?? ''}`}
                   >
@@ -293,11 +377,13 @@ export default function RegrasQualificacaoPage() {
                   </span>
                 </CardTitle>
                 <CardDescription>
-                  {v.criteria.length} critério{v.criteria.length === 1 ? '' : 's'}
+                  peso estratégico {v.strategic_weight} · {v.criteria.length} critério
+                  {v.criteria.length === 1 ? '' : 's'}
                   {v.expand?.approved_by?.name
-                    ? ` · aprovada por ${v.expand.approved_by.name}`
+                    ? ` · aprovado por ${v.expand.approved_by.name}`
                     : ''}
                   {v.status !== 'rascunho' ? ` em ${fmtDate(v.approved_at)}` : ''}
+                  {v.target_notes ? ` · ${v.target_notes}` : ''}
                   {v.notes ? ` · ${v.notes}` : ''}
                 </CardDescription>
               </CardHeader>
@@ -312,20 +398,45 @@ export default function RegrasQualificacaoPage() {
                   ))}
                 </ul>
                 {isAdmin && (
-                  <div className="flex gap-2 pt-1">
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
                     {v.status === 'rascunho' && (
-                      <Button
-                        size="sm"
-                        onClick={() => activate(v.id, v.version_number)}
-                        disabled={saving}
-                      >
-                        Ativar regra
+                      <Button size="sm" onClick={() => activate(v)} disabled={saving}>
+                        Ativar perfil
                       </Button>
                     )}
                     {v.status === 'ativo' && (
-                      <Button size="sm" variant="outline" onClick={() => archive(v.id)}>
-                        Arquivar (desativa o score)
-                      </Button>
+                      <>
+                        <div className="flex items-center gap-1">
+                          <Label htmlFor={`w-${v.id}`} className="text-xs">
+                            Peso
+                          </Label>
+                          <Input
+                            id={`w-${v.id}`}
+                            type="number"
+                            min={1}
+                            className="h-8 w-20"
+                            value={editingWeight[v.id] ?? v.strategic_weight}
+                            onChange={(e) =>
+                              setEditingWeight((prev) => ({
+                                ...prev,
+                                [v.id]: Number(e.target.value),
+                              }))
+                            }
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              saveWeight(v.id, editingWeight[v.id] ?? v.strategic_weight)
+                            }
+                          >
+                            Salvar peso
+                          </Button>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => archive(v.id)}>
+                          Desativar
+                        </Button>
+                      </>
                     )}
                   </div>
                 )}

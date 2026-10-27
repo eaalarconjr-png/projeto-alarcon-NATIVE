@@ -1,4 +1,8 @@
-// task AL-F2-01: convênios/planos e regras de qualificação versionadas — só o serviço fala com o SDK
+// task AL-F2-01 + pedido do Dr. Ernesto (27/10): PERFIS de paciente com peso estratégico.
+// Diferente de "versão que substitui": vários perfis ficam ATIVOS AO MESMO TEMPO, cada um com
+// seu peso estratégico (prioridade declarada pela clínica) e seus critérios. A avaliação roda
+// todos e devolve o ranking — o perfil mais pretendido e o menos pretendido.
+// Só o serviço fala com o SDK.
 import pb from '@/lib/pocketbase/client'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { getCurrentUser } from '@/services/auth'
@@ -36,6 +40,9 @@ export type RuleStatus = 'rascunho' | 'ativo' | 'arquivado'
 export interface QualificationRuleVersion {
   id: string
   version_number: number
+  profile_name: string
+  strategic_weight: number
+  target_notes: string
   status: RuleStatus
   criteria: RuleCriterion[]
   notes: string
@@ -128,8 +135,8 @@ export const deletePlan = async (id: string): Promise<void> => {
 
 export const listRuleVersions = async (): Promise<QualificationRuleVersion[]> => {
   try {
-    const list = await pb.collection('qualification_rule_versions').getList(1, 50, {
-      sort: '-version_number',
+    const list = await pb.collection('qualification_rule_versions').getList(1, 100, {
+      sort: '-strategic_weight,-version_number',
       expand: 'approved_by',
     })
     return list.items.map((r) => {
@@ -142,12 +149,24 @@ export const listRuleVersions = async (): Promise<QualificationRuleVersion[]> =>
   }
 }
 
-export const createRuleVersion = async (
-  criteria: RuleCriterion[],
-  notes = '',
-): Promise<QualificationRuleVersion> => {
-  if (criteria.length === 0) throw new Error('Adicione ao menos um critério à regra.')
-  for (const c of criteria) {
+export interface RuleVersionInput {
+  criteria: RuleCriterion[]
+  profileName: string
+  strategicWeight: number
+  targetNotes?: string
+  notes?: string
+}
+
+const validateRule = (data: RuleVersionInput) => {
+  if (!data.profileName.trim() || data.profileName.trim().length < 3) {
+    throw new Error('Dê um nome ao perfil de paciente (mínimo 3 letras).')
+  }
+  const weight = Number(data.strategicWeight)
+  if (!(weight >= 1)) {
+    throw new Error('O peso estratégico do perfil precisa ser 1 ou mais.')
+  }
+  if (data.criteria.length === 0) throw new Error('Adicione ao menos um critério ao perfil.')
+  for (const c of data.criteria) {
     if (!c.label.trim()) throw new Error('Todo critério precisa de um nome.')
     if (!(Number(c.weight) >= 0)) {
       throw new Error(`O peso do critério "${c.label}" precisa ser zero ou positivo.`)
@@ -156,6 +175,13 @@ export const createRuleVersion = async (
       throw new Error(`O critério "${c.label}" precisa do valor esperado.`)
     }
   }
+}
+
+/** Cria um PERFIL de paciente (rascunho). Vários podem ficar ativos ao mesmo tempo. */
+export const createRuleVersion = async (
+  data: RuleVersionInput,
+): Promise<QualificationRuleVersion> => {
+  validateRule(data)
   try {
     const last = await pb.collection('qualification_rule_versions').getList(1, 1, {
       sort: '-version_number',
@@ -167,21 +193,31 @@ export const createRuleVersion = async (
     const next = Number.isFinite(lastNumber) && lastNumber > 0 ? lastNumber + 1 : 1
     const rec = await pb.collection('qualification_rule_versions').create({
       version_number: next,
+      profile_name: data.profileName.trim(),
+      strategic_weight: Number(data.strategicWeight),
+      target_notes: data.targetNotes?.trim() || '',
       status: 'rascunho',
-      criteria: JSON.stringify(criteria),
-      notes: notes.trim(),
+      criteria: JSON.stringify(data.criteria),
+      notes: data.notes?.trim() || '',
     })
-    return { ...(rec as unknown as QualificationRuleVersion), criteria }
+    return {
+      ...(rec as unknown as QualificationRuleVersion),
+      criteria: data.criteria,
+    }
   } catch (error) {
     throw new Error(getErrorMessage(error))
   }
 }
 
+/**
+ * Ativa um perfil. DIFERENTE da versão anterior: NÃO arquiva os outros perfis ativos.
+ * Vários perfis podem coexistir — é o que permite comparar qual paciente a clínica quer mais.
+ */
 export const activateRuleVersion = async (id: string): Promise<void> => {
   const user = getCurrentUser()
   if (!user) throw new Error('Sessão expirada. Entre novamente para continuar.')
   if (user.role !== 'admin') {
-    throw new Error('Apenas o administrador pode ativar uma regra de qualificação.')
+    throw new Error('Apenas o administrador pode ativar um perfil de qualificação.')
   }
   let criteriaCount = 0
   try {
@@ -191,17 +227,9 @@ export const activateRuleVersion = async (id: string): Promise<void> => {
     throw new Error(getErrorMessage(error))
   }
   if (criteriaCount === 0) {
-    throw new Error('Regra sem critérios não pode ser ativada.')
+    throw new Error('Perfil sem critérios não pode ser ativado.')
   }
   try {
-    const active = await pb.collection('qualification_rule_versions').getFullList({
-      filter: pb.filter("status = 'ativo'"),
-    })
-    for (const r of active) {
-      if (r.id !== id) {
-        await pb.collection('qualification_rule_versions').update(r.id, { status: 'arquivado' })
-      }
-    }
     await pb.collection('qualification_rule_versions').update(id, {
       status: 'ativo',
       approved_by: user.id,
@@ -212,11 +240,37 @@ export const activateRuleVersion = async (id: string): Promise<void> => {
   }
 }
 
+/** Atualiza peso estratégico / nome / critérios de um perfil (admin). */
+export const updateRuleVersion = async (
+  id: string,
+  data: Partial<RuleVersionInput>,
+): Promise<void> => {
+  const user = getCurrentUser()
+  if (!user) throw new Error('Sessão expirada. Entre novamente para continuar.')
+  if (user.role !== 'admin') {
+    throw new Error('Apenas o administrador pode editar um perfil de qualificação.')
+  }
+  const patch: Record<string, unknown> = {}
+  if (data.profileName !== undefined) patch.profile_name = data.profileName.trim()
+  if (data.strategicWeight !== undefined) patch.strategic_weight = Number(data.strategicWeight)
+  if (data.targetNotes !== undefined) patch.target_notes = data.targetNotes.trim()
+  if (data.notes !== undefined) patch.notes = data.notes.trim()
+  if (data.criteria !== undefined) {
+    if (data.criteria.length === 0) throw new Error('Adicione ao menos um critério ao perfil.')
+    patch.criteria = JSON.stringify(data.criteria)
+  }
+  try {
+    await pb.collection('qualification_rule_versions').update(id, patch)
+  } catch (error) {
+    throw new Error(getErrorMessage(error))
+  }
+}
+
 export const archiveRuleVersion = async (id: string): Promise<void> => {
   const user = getCurrentUser()
   if (!user) throw new Error('Sessão expirada. Entre novamente para continuar.')
   if (user.role !== 'admin') {
-    throw new Error('Apenas o administrador pode arquivar uma regra de qualificação.')
+    throw new Error('Apenas o administrador pode desativar um perfil de qualificação.')
   }
   try {
     await pb.collection('qualification_rule_versions').update(id, { status: 'arquivado' })

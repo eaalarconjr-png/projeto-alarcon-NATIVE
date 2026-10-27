@@ -430,14 +430,28 @@ export default function FichaPage() {
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={runEvaluation} disabled={evaluating}>
-              {evaluating ? 'Avaliando…' : 'Avaliar com a regra ativa'}
+              {evaluating ? 'Avaliando…' : 'Avaliar perfil do paciente'}
             </Button>
             {lastEval?.state === 'nao_configurada' && (
               <span className="text-sm text-muted-foreground">
-                Nenhuma regra ativa — o score não está configurado.
+                Nenhum perfil ativo — o score não está configurado.
               </span>
             )}
           </div>
+          {lastEval?.results && lastEval.results.length > 0 && (
+            <div className="rounded-md border border-border p-3">
+              <p className="text-sm font-medium">
+                Perfil mais pretendido: {lastEval.best_profile_name} · {lastEval.best_fit_pct ?? 0}%
+                de aderência
+              </p>
+              {lastEval.results.length > 1 && (
+                <p className="text-xs text-muted-foreground">
+                  Menos pretendido: {lastEval.results[lastEval.results.length - 1].profile_name} ·{' '}
+                  {lastEval.results[lastEval.results.length - 1].fit_pct}% de aderência
+                </p>
+              )}
+            </div>
+          )}
           {evalError && (
             <p className="text-sm text-destructive" role="alert">
               {evalError}
@@ -452,12 +466,17 @@ export default function FichaPage() {
               {quals.map((q) => (
                 <li key={q.id} className="rounded-md border border-border p-3">
                   <p className="text-sm font-medium">
-                    Nota {q.score}
+                    {q.best_profile_name
+                      ? `Perfil: ${q.best_profile_name}`
+                      : q.expand?.rule_version?.profile_name
+                        ? `Perfil: ${q.expand.rule_version.profile_name}`
+                        : 'Perfil'}
+                    {typeof q.fit_pct === 'number' ? ` · ${q.fit_pct}% de aderência` : ''}
                     {q.expand?.rule_version?.version_number
-                      ? ` · regra v${q.expand.rule_version.version_number}`
+                      ? ` · v${q.expand.rule_version.version_number}`
                       : ''}
                     {q.state === 'incompleta' ? ' · incompleta (há critério sem dado)' : ''}
-                    {q.state === 'nao_configurada' ? ' · sem regra ativa' : ''}
+                    {q.state === 'nao_configurada' ? ' · sem perfil ativo' : ''}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {q.expand?.evaluated_by?.name ?? 'Equipe'} ·{' '}
@@ -477,6 +496,30 @@ export default function FichaPage() {
                       </li>
                     ))}
                   </ul>
+                  {q.results && q.results.length > 1 && (
+                    <div className="mt-2 space-y-1 border-t border-border pt-2 text-xs">
+                      <p className="font-medium text-foreground">
+                        Ranking dos perfis nesta avaliação
+                      </p>
+                      <ol className="space-y-0.5">
+                        {q.results.map((r) => (
+                          <li
+                            key={r.rule_id}
+                            className="flex justify-between gap-2 text-muted-foreground"
+                          >
+                            <span>
+                              {r.rank}º {r.profile_name}
+                              <span className="opacity-70">
+                                {' '}
+                                · peso estratégico {r.strategic_weight}
+                              </span>
+                            </span>
+                            <span className="tabular-nums">{r.fit_pct}%</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
                 </li>
               ))}
             </ol>

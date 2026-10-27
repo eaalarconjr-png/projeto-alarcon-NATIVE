@@ -1,8 +1,10 @@
-// task AL-F2-02: avaliação de qualificação explicável — rota autenticada no servidor.
-// Regras da SPEC: mesma versão da regra + mesmos dados produzem o mesmo resultado
-// (determinístico); campo ausente não recebe zero silenciosamente (vira "sem dado" e o
-// estado é incompleta); nota baixa não arquiva contato nem bloqueia atendimento; recalcular
-// cria registro novo preservando o anterior. Sem regra ativa: nao_configurada, nada salvo.
+// AL-F2-02 revisado — pedido do Dr. Ernesto (27/10, 18:32):
+// vários PERFIS de paciente podem estar ativos ao mesmo tempo. A avaliação roda todos os perfis
+// ativos sobre a mesma oportunidade, calcula a aderência de cada um (pontos obtidos ÷ pontos
+// possíveis) e devolve o ranking: qual perfil é o mais pretendido pela clínica, qual é o menos.
+// O peso estratégico do perfil desempata aderências iguais — é a prioridade que a clínica declara.
+// Regras da SPEC mantidas: determinístico, ausente não é zero (vira "sem dado"), nota baixa não
+// arquiva nem bloqueia, recalcular cria registro novo preservando o anterior.
 routerAdd(
   'POST',
   '/backend/v1/qualificacao/avaliar',
@@ -20,43 +22,38 @@ routerAdd(
       return e.notFoundError('Oportunidade não encontrada.')
     }
 
-    // 1. regra ativa (uma só, garantido pela ativação)
-    let rule = null
-    try {
-      rule = $app.findFirstRecordByFilter('qualification_rule_versions', "status = 'ativo'")
-    } catch (_) {}
-    if (!rule) {
+    // 1. TODOS os perfis ativos (não só um)
+    const rules = $app.findRecordsByFilter(
+      'qualification_rule_versions',
+      "status = 'ativo'",
+      '-strategic_weight,-version_number',
+      50,
+      0,
+    )
+    if (!rules || rules.length === 0) {
       return e.json(200, {
         evaluation_id: null,
         state: 'nao_configurada',
         score: null,
         explanation: [],
         rule_version: null,
+        best_profile_name: '',
+        fit_pct: null,
+        results: [],
       })
-    }
-
-    let criteria
-    try {
-      criteria = JSON.parse(rule.getString('criteria'))
-    } catch (_) {
-      return e.badRequestError('Regra ativa com configuração inválida.')
-    }
-    if (!Array.isArray(criteria) || criteria.length === 0) {
-      return e.badRequestError('Regra ativa sem critérios.')
     }
 
     // 2. dados da oportunidade e das respostas de formulário vinculadas a ela
     const subs = $app.findRecordsByFilter('submissions', 'opportunity = {:o}', '-created', 50, 0, {
       o: opId,
     })
-    // para critérios de resposta, compara o valor gravado E o rótulo da opção escolhida
     const answerValues = []
     for (const sub of subs) {
       let answers = {}
       try {
         answers = JSON.parse(sub.getString('answers') || '{}')
       } catch (_) {}
-      let labelsById = {}
+      const labelsById = {}
       try {
         const version = $app.findRecordById('form_versions', sub.getString('form_version'))
         const schema = JSON.parse(version.getString('schema') || '{}')
@@ -79,76 +76,130 @@ routerAdd(
       String(s || '')
         .trim()
         .toLowerCase()
-    const explanation = []
-    let score = 0
-    let missing = false
 
-    for (const c of criteria) {
-      const weight = Number(c.weight) || 0
-      const expected = norm(c.expected)
-      let value = null
-      let matchedLabels = []
+    // 3. avalia cada perfil ativo com os mesmos dados
+    const results = []
+    for (const rule of rules) {
+      let criteria
+      try {
+        criteria = JSON.parse(rule.getString('criteria'))
+      } catch (_) {
+        criteria = null
+      }
+      if (!Array.isArray(criteria) || criteria.length === 0) continue
 
-      if (c.source === 'modalidade') {
-        value = op.getString('modality')
-      } else if (c.source === 'origem') {
-        value = op.getString('origin_declared')
-      } else {
-        // resposta: procura em todas as respostas vinculadas à oportunidade
-        for (const a of answerValues) {
-          if (norm(a.value) === expected || a.labels.some((l) => norm(l) === expected)) {
-            value = a.value
-            matchedLabels = a.labels
-            break
+      const explanation = []
+      let score = 0
+      let maxScore = 0
+      let missing = false
+
+      for (const c of criteria) {
+        const weight = Number(c.weight) || 0
+        maxScore += weight
+        const expected = norm(c.expected)
+        let value = null
+        let matchedLabels = []
+
+        if (c.source === 'modalidade') {
+          value = op.getString('modality')
+        } else if (c.source === 'origem') {
+          value = op.getString('origin_declared')
+        } else {
+          for (const a of answerValues) {
+            if (norm(a.value) === expected || a.labels.some((l) => norm(l) === expected)) {
+              value = a.value
+              matchedLabels = a.labels
+              break
+            }
           }
         }
-      }
 
-      if (value === null || value === '') {
+        if (value === null || value === '') {
+          explanation.push({
+            label: String(c.label || ''),
+            weight,
+            status: 'sem_dado',
+            motivo: 'Sem dado lançado para este critério — não conta como zero.',
+          })
+          missing = true
+          continue
+        }
+
+        const hit =
+          c.source === 'resposta'
+            ? matchedLabels.length > 0 || norm(value) === expected
+            : norm(value) === expected
+        if (hit) score += weight
+
         explanation.push({
           label: String(c.label || ''),
           weight,
-          status: 'sem_dado',
-          motivo: 'Sem dado lançado para este critério — não conta como zero.',
+          status: hit ? 'atingido' : 'nao_atingido',
+          valor: matchedLabels.length ? matchedLabels[0] : value,
+          motivo: hit
+            ? `Critério atingido (+${weight})`
+            : 'Valor diferente do esperado — não soma.',
         })
-        missing = true
-        continue
       }
 
-      const hit =
-        c.source === 'resposta'
-          ? matchedLabels.length > 0 || norm(value) === expected
-          : norm(value) === expected
-      if (hit) {
-        score += weight
-      }
-      explanation.push({
-        label: String(c.label || ''),
-        weight,
-        status: hit ? 'atingido' : 'nao_atingido',
-        valor: matchedLabels.length ? matchedLabels[0] : value,
-        motivo: hit ? `Critério atingido (+${weight})` : 'Valor diferente do esperado — não soma.',
+      const fitPct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0
+      results.push({
+        rule_id: rule.id,
+        rule_version: rule.getInt('version_number', 0),
+        profile_name:
+          rule.getString('profile_name') || `Perfil v${rule.getInt('version_number', 0)}`,
+        strategic_weight: rule.getInt('strategic_weight', 10),
+        state: missing ? 'incompleta' : 'completa',
+        score,
+        max_score: maxScore,
+        fit_pct: fitPct,
+        fit_level: fitPct >= 75 ? 'alta' : fitPct >= 40 ? 'media' : 'baixa',
+        explanation,
       })
     }
 
-    const state = missing ? 'incompleta' : 'completa'
+    if (results.length === 0) {
+      return e.badRequestError('Nenhum perfil ativo com critérios válidos.')
+    }
 
-    // 3. registra a avaliação (imutável; recalcular cria outra)
+    // 4. ranking: aderência primeiro; peso estratégico desempata
+    results.sort((a, b) => {
+      if (b.fit_pct !== a.fit_pct) return b.fit_pct - a.fit_pct
+      if (b.strategic_weight !== a.strategic_weight) return b.strategic_weight - a.strategic_weight
+      return b.score - a.score
+    })
+    results.forEach((r, i) => {
+      r.rank = i + 1
+    })
+
+    const best = results[0]
+    const worst = results[results.length - 1]
+
+    // 5. registra a avaliação (imutável; recalcular cria outra)
     const rec = new Record($app.findCollectionByNameOrId('qualifications'))
     rec.set('opportunity', opId)
-    rec.set('rule_version', rule.id)
-    rec.set('state', state)
-    rec.set('score', score)
-    rec.set('explanation', JSON.stringify(explanation))
+    rec.set('rule_version', best.rule_id)
+    rec.set('state', best.state)
+    rec.set('score', best.score)
+    rec.set('explanation', JSON.stringify(best.explanation))
     rec.set('evaluated_by', e.auth.id)
+    rec.set('results', JSON.stringify(results))
+    rec.set('best_profile_name', best.profile_name)
+    rec.set('fit_pct', best.fit_pct)
     $app.save(rec)
 
     return e.json(200, {
       evaluation_id: rec.id,
-      state,
-      score,
-      explanation,
-      rule_version: rule.getInt('version_number', 0),
+      state: best.state,
+      score: best.score,
+      explanation: best.explanation,
+      rule_version: best.rule_version,
+      best_profile_name: best.profile_name,
+      best_fit_pct: best.fit_pct,
+      worst_profile_name: results.length > 1 ? worst.profile_name : worst.profile_name,
+      worst_fit_pct: results.length > 1 ? worst.fit_pct : worst.fit_pct,
+      fit_pct: best.fit_pct,
+      results,
     })
   },
   $apis.requireAuth(),
