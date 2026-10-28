@@ -508,14 +508,18 @@ export default function FichaPage() {
                             className="flex justify-between gap-2 text-muted-foreground"
                           >
                             <span>
-                              {r.state === 'incompleta' ? '—' : `${r.rank}º`} {r.profile_name}
+                              {r.state === 'completa' ? `${r.rank}º` : '—'} {r.profile_name}
                               <span className="opacity-70">
                                 {' '}
                                 · peso estratégico {r.strategic_weight}
                               </span>
                             </span>
                             <span className="tabular-nums">
-                              {r.state === 'incompleta' ? 'sem dado' : `${r.fit_pct}%`}
+                              {r.state === 'incompleta'
+                                ? 'sem dado'
+                                : r.state === 'invalida'
+                                  ? 'mal configurado'
+                                  : `${r.fit_pct}%`}
                             </span>
                           </li>
                         ))}
@@ -524,6 +528,12 @@ export default function FichaPage() {
                         <p className="text-xs text-muted-foreground">
                           Perfil “sem dado” depende de informação ainda não lançada — não é o menos
                           pretendido, apenas não pôde ser julgado.
+                        </p>
+                      )}
+                      {q.results.some((r) => r.state === 'invalida') && (
+                        <p className="text-xs text-destructive">
+                          Perfil “mal configurado”: o valor esperado do critério não existe no
+                          sistema. Corrija em Perfis de paciente — enquanto isso ele não pontua.
                         </p>
                       )}
                     </div>

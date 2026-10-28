@@ -27,6 +27,31 @@ export const PLAN_PATH_LABELS: Record<PlanPath, string> = {
 
 export type RuleSource = 'modalidade' | 'origem' | 'resposta'
 
+/**
+ * Valores VÁLIDOS de cada origem de dado — os mesmos gravados na ficha da oportunidade.
+ * Correção de 28/10: o "valor esperado" era texto livre e o Dr. digitou descrições
+ * ("Valor de Particular") em vez de `particular`; nenhum perfil conseguia pontuar.
+ * Agora a tela oferece esta lista fechada e o serviço recusa valor fora dela.
+ */
+export const CRITERION_TARGETS: Record<
+  'modalidade' | 'origem',
+  { value: string; label: string }[]
+> = {
+  modalidade: [
+    { value: 'particular', label: 'Particular' },
+    { value: 'convenio', label: 'Convênio' },
+    { value: 'reembolso', label: 'Reembolso' },
+  ],
+  origem: [
+    { value: 'whatsapp', label: 'WhatsApp' },
+    { value: 'site', label: 'Site' },
+    { value: 'indicacao', label: 'Indicação' },
+    { value: 'convenio_app', label: 'App do convênio' },
+    { value: 'outro', label: 'Outro' },
+    { value: 'nao_identificado', label: 'Não identificado' },
+  ],
+}
+
 export interface RuleCriterion {
   id: string
   label: string
@@ -173,6 +198,16 @@ const validateRule = (data: RuleVersionInput) => {
     }
     if (!c.expected.trim()) {
       throw new Error(`O critério "${c.label}" precisa do valor esperado.`)
+    }
+    if (c.source === 'modalidade' || c.source === 'origem') {
+      const allowed = CRITERION_TARGETS[c.source].map((t) => t.value)
+      if (!allowed.includes(c.expected.trim())) {
+        throw new Error(
+          `O critério "${c.label}" precisa de um valor da lista (${CRITERION_TARGETS[c.source]
+            .map((t) => t.label)
+            .join(', ')}).`,
+        )
+      }
     }
   }
 }

@@ -18,7 +18,9 @@ export interface ProfileResult {
   rule_version: number
   profile_name: string
   strategic_weight: number
-  state: 'completa' | 'incompleta'
+  /** invalida = o perfil tem critério mal configurado; não foi julgado, não é "0%". */
+  state: 'completa' | 'incompleta' | 'invalida'
+  invalid_criteria?: string[]
   score: number
   max_score: number
   fit_pct: number

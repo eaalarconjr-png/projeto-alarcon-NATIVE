@@ -10,6 +10,7 @@ import {
   createRuleVersion,
   listRuleVersions,
   updateRuleVersion,
+  CRITERION_TARGETS,
   type QualificationRuleVersion,
   type RuleCriterion,
   type RuleSource,
@@ -290,12 +291,39 @@ export default function RegrasQualificacaoPage() {
               </div>
               <div className="space-y-1 sm:col-span-2">
                 <Label htmlFor={`crit-expected-${c.id}`}>Valor esperado *</Label>
-                <Input
-                  id={`crit-expected-${c.id}`}
-                  value={c.expected}
-                  onChange={(e) => updateCriterion(c.id, { expected: e.target.value })}
-                  placeholder="Ex.: particular"
-                />
+                {c.source === 'resposta' ? (
+                  <>
+                    <Input
+                      id={`crit-expected-${c.id}`}
+                      value={c.expected}
+                      onChange={(e) => updateCriterion(c.id, { expected: e.target.value })}
+                      placeholder="Ex.: Cirurgia (texto exato da resposta)"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Use exatamente o texto de uma opção do formulário.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <select
+                      id={`crit-expected-${c.id}`}
+                      value={c.expected}
+                      onChange={(e) => updateCriterion(c.id, { expected: e.target.value })}
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                    >
+                      <option value="">Escolha o valor…</option>
+                      {CRITERION_TARGETS[c.source].map((t) => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground">
+                      Lista fechada: é o valor que o sistema grava na ficha. Texto livre aqui faria
+                      o perfil nunca pontuar.
+                    </p>
+                  </>
+                )}
               </div>
               {criteria.length > 1 && (
                 <Button

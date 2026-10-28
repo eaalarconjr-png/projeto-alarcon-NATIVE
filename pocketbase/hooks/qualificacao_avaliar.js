@@ -143,13 +143,16 @@ routerAdd(
       }
 
       const fitPct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0
+      const badCriteria = invalidCriteria(criteria)
       results.push({
         rule_id: rule.id,
         rule_version: rule.getInt('version_number', 0),
         profile_name:
           rule.getString('profile_name') || `Perfil v${rule.getInt('version_number', 0)}`,
         strategic_weight: rule.getInt('strategic_weight', 10),
-        state: missing ? 'incompleta' : 'completa',
+        // configuração inválida tem precedência: nada pior que um perfil zerando em silêncio
+        state: badCriteria.length ? 'invalida' : missing ? 'incompleta' : 'completa',
+        invalid_criteria: badCriteria,
         score,
         max_score: maxScore,
         fit_pct: fitPct,
@@ -164,6 +167,7 @@ routerAdd(
 
     // 4. ranking SÓ entre perfis com dado completo: ausente não é zero, então perfil que
     // depende de um dado não lançado não pode ser tratado como "menos pretendido".
+    // Perfil com configuração inválida também fica fora: ele não foi julgado, está quebrado.
     const complete = results.filter((r) => r.state === 'completa')
     complete.sort((a, b) => {
       if (b.fit_pct !== a.fit_pct) return b.fit_pct - a.fit_pct
