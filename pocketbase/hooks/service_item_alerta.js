@@ -4,20 +4,18 @@
 // O Dr. cria, edita, ativa/desativa e remove réguas pela tela — o motor não muda.
 // Regras mantidas da SPEC: alerta só dentro do horário de funcionamento; deduplicado por
 // item + régua enquanto não reconhecido; nada é enviado ao paciente (alerta é interno).
-const SP_OFFSET_MIN = -180 // America/Sao_Paulo = UTC-3
-
-const toMinutes = (hhmm) => {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim())
-  return m ? Number(m[1]) * 60 + Number(m[2]) : null
-}
-
-const parseDate = (raw) => {
-  if (!raw) return null
-  const d = new Date(String(raw).replace(' ', 'T'))
-  return isNaN(d.getTime()) ? null : d
-}
-
 cronAdd('fila_alertas_atraso', '* * * * *', () => {
+  // PocketBase JSVM: cada callback roda em VM separada — todo helper mora DENTRO do callback.
+  const SP_OFFSET_MIN = -180 // America/Sao_Paulo = UTC-3
+  const toMinutes = (hhmm) => {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim())
+    return m ? Number(m[1]) * 60 + Number(m[2]) : null
+  }
+  const parseDate = (raw) => {
+    if (!raw) return null
+    const d = new Date(String(raw).replace(' ', 'T'))
+    return isNaN(d.getTime()) ? null : d
+  }
   // 1. horário de funcionamento (editável pelo CEO em Configuração)
   let startMin = null
   let endMin = null
