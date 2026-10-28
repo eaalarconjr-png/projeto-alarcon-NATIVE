@@ -17,6 +17,7 @@ export interface Opportunity {
   contact: string
   interest: string
   modality: string
+  care_type: string
   owner: string
   stage: string
   status: string
@@ -99,6 +100,7 @@ export interface OpportunityInput {
   contact: string
   interest: string
   modality: string
+  care_type?: string
   owner: string
   origin_declared?: string
 }
@@ -109,6 +111,7 @@ export const createOpportunity = async (data: OpportunityInput): Promise<Opportu
       contact: data.contact,
       interest: data.interest.trim(),
       modality: data.modality || 'particular',
+      care_type: data.care_type || 'cirurgico',
       owner: data.owner,
       stage: 'novo',
       status: 'aberta',

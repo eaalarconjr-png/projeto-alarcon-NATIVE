@@ -87,6 +87,15 @@ migrate(
         notes: 'Prioridade de resposta imediata.',
       },
       {
+        name: 'Cirúrgico convênio sem resposta · 3 min',
+        kind: 'sem_interacao',
+        threshold_minutes: 3,
+        priority: 'urgente',
+        applies_to: 'convenio',
+        action_hint: 'Ligar agora. Paciente cirúrgico de convênio sem interação.',
+        notes: 'Pedido do Dr.: cirúrgico de convênio tem prioridade de resposta imediata.',
+      },
+      {
         name: 'Clínico Porto Saúde sem resposta · 40 min',
         kind: 'sem_interacao',
         threshold_minutes: 40,

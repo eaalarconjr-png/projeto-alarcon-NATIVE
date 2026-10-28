@@ -75,19 +75,20 @@ cronAdd('fila_alertas_atraso', '* * * * *', () => {
     alertedKeys[key] = true
   }
 
-  // perfil do paciente a partir da modalidade (e do plano, quando convênio)
+  // Perfil do paciente = modalidade + tipo de cuidado. As réguas do Dr. distinguem
+  // cirúrgico de clínico e particular de convênio; sem care_type o perfil não é julgado.
   const profileOf = (op) => {
     const mod = op.getString('modality')
+    const care = op.getString('care_type')
+    if (mod === 'convenio') return care === 'clinico' ? 'clinico_porto' : 'convenio'
     if (mod === 'reembolso') return 'reembolso'
-    if (mod === 'particular') return 'particular'
-    if (mod === 'convenio') return 'convenio'
-    return 'particular'
+    if (mod === 'particular') return care === 'clinico' ? 'clinico_particular' : 'particular'
+    return ''
   }
   const ruleCoversProfile = (rule, profile) => {
     const target = rule.getString('applies_to')
     if (!target || target === 'todos') return true
-    if (target === 'clinico_particular') return profile === 'particular'
-    if (target === 'clinico_porto') return profile === 'convenio'
+    if (!profile) return false // perfil desconhecido: nenhuma régua específica se aplica
     return target === profile
   }
 
