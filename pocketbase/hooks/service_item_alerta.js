@@ -146,8 +146,9 @@ cronAdd('fila_alertas_atraso', '* * * * *', () => {
           }
         }
         if (!reference) {
-          // sem item de fila: usa a criação da oportunidade
-          reference = parseDate(op.getString('created'))
+          // sem item de fila: usa a criação da oportunidade. `created` pode vir vazio em
+          // registros antigos (defeito 28/10) — cai para `updated`, que sempre existe.
+          reference = parseDate(op.getString('created')) || parseDate(op.getString('updated'))
           referenceItem = null
         }
         if (!reference) continue
