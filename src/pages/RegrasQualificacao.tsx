@@ -8,6 +8,7 @@ import {
   archiveRuleVersion,
   activateRuleVersion,
   createRuleVersion,
+  deleteRuleVersion,
   listRuleVersions,
   updateRuleVersion,
   CRITERION_TARGETS,
@@ -30,7 +31,7 @@ const STATUS_BADGE: Record<string, string> = {
 }
 
 const emptyCriterion = (): RuleCriterion => ({
-  id: `c${Date.now()}${Math.floor(Math.random() * 1000)}`,
+  id: `c${Date.now()}${Math.floor(Math.random() * 100000)}`,
   label: '',
   weight: 10,
   source: 'modalidade',
@@ -46,11 +47,29 @@ const fmtDate = (iso: string) =>
       })
     : '—'
 
+interface Draft {
+  profileName: string
+  strategicWeight: number
+  targetNotes: string
+  notes: string
+  criteria: RuleCriterion[]
+}
+
+const draftFrom = (v: QualificationRuleVersion): Draft => ({
+  profileName: v.profile_name || '',
+  strategicWeight: v.strategic_weight || 10,
+  targetNotes: v.target_notes || '',
+  notes: v.notes || '',
+  criteria: v.criteria.length ? v.criteria : [emptyCriterion()],
+})
+
 /**
- * Qualificação — PERFIS DE PACIENTE (pedido do Dr. Ernesto, 27/10).
- * Vários perfis podem ficar ativos ao mesmo tempo. O peso estratégico diz qual perfil a clínica
- * mais quer atrair; a avaliação do paciente (na ficha) compara todos e mostra o ranking.
- * A nota só existe para perfil ativo e aprovado — nada é descartado automaticamente.
+ * Perfis de paciente (pedido do Dr. 27/10, ajustado em 28/10).
+ * Vários perfis ativos ao mesmo tempo, cada um com peso estratégico. Todo perfil pode ser
+ * EDITADO (nome, peso, critérios, notas) a qualquer momento e também REMOVIDO, para a clínica
+ * recalibrar sempre que quiser. Perfil já usado em avaliação não é apagado: o histórico manda.
+ * O valor esperado de modalidade e origem é lista fechada — texto livre faria o perfil nunca
+ * pontuar (defeito corrigido em 28/10).
  */
 export default function RegrasQualificacaoPage() {
   const [versions, setVersions] = useState<QualificationRuleVersion[]>([])
@@ -58,13 +77,14 @@ export default function RegrasQualificacaoPage() {
   const [error, setError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [notes, setNotes] = useState('')
-  const [profileName, setProfileName] = useState('')
-  const [strategicWeight, setStrategicWeight] = useState(10)
-  const [targetNotes, setTargetNotes] = useState('')
-  const [criteria, setCriteria] = useState<RuleCriterion[]>([emptyCriterion()])
-  const [editingWeight, setEditingWeight] = useState<Record<string, number>>({})
-  const [editingName, setEditingName] = useState<Record<string, string>>({})
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draft, setDraft] = useState<Draft>({
+    profileName: '',
+    strategicWeight: 10,
+    targetNotes: '',
+    notes: '',
+    criteria: [emptyCriterion()],
+  })
   const isAdmin = getCurrentUser()?.role === 'admin'
 
   const load = async () => {
@@ -86,25 +106,56 @@ export default function RegrasQualificacaoPage() {
   const activeProfiles = versions.filter((v) => v.status === 'ativo')
   const rankedActive = [...activeProfiles].sort((a, b) => b.strategic_weight - a.strategic_weight)
 
-  const submitDraft = async () => {
+  const resetDraft = () => {
+    setEditingId(null)
+    setDraft({
+      profileName: '',
+      strategicWeight: 10,
+      targetNotes: '',
+      notes: '',
+      criteria: [emptyCriterion()],
+    })
+    setFormError(null)
+  }
+
+  const startEdit = (v: QualificationRuleVersion) => {
+    setEditingId(v.id)
+    setDraft(draftFrom(v))
+    setFormError(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const submit = async () => {
     setFormError(null)
     setSaving(true)
     try {
-      await createRuleVersion({
-        criteria,
-        profileName,
-        strategicWeight,
-        targetNotes,
-        notes,
-      })
-      setCriteria([emptyCriterion()])
-      setNotes('')
-      setProfileName('')
-      setStrategicWeight(10)
-      setTargetNotes('')
+      if (editingId) {
+        await updateRuleVersion(editingId, {
+          profileName: draft.profileName,
+          strategicWeight: draft.strategicWeight,
+          targetNotes: draft.targetNotes,
+          notes: draft.notes,
+          criteria: draft.criteria,
+        })
+      } else {
+        await createRuleVersion({
+          criteria: draft.criteria,
+          profileName: draft.profileName,
+          strategicWeight: draft.strategicWeight,
+          targetNotes: draft.targetNotes,
+          notes: draft.notes,
+        })
+      }
+      resetDraft()
       await load()
     } catch (e) {
-      setFormError(e instanceof Error ? e.message : 'Não foi possível salvar o perfil.')
+      setFormError(
+        e instanceof Error
+          ? e.message
+          : editingId
+            ? 'Não foi possível salvar as alterações.'
+            : 'Não foi possível salvar o perfil.',
+      )
     } finally {
       setSaving(false)
     }
@@ -114,8 +165,7 @@ export default function RegrasQualificacaoPage() {
     if (
       !window.confirm(
         `Ativar o perfil "${profile.profile_name}" (peso ${profile.strategic_weight})? ` +
-          'Ele passa a concorrer com os outros perfis ativos na avaliação dos pacientes. ' +
-          'Os perfis que já estão ativos continuam ativos.',
+          'Ele passa a concorrer com os outros perfis ativos. Os que já estão ativos continuam.',
       )
     ) {
       return
@@ -132,45 +182,47 @@ export default function RegrasQualificacaoPage() {
     }
   }
 
-  const archive = async (id: string) => {
+  const archive = async (v: QualificationRuleVersion) => {
     if (
       !window.confirm(
-        'Desativar este perfil? Ele deixa de concorrer, mas o histórico fica guardado.',
+        `Desativar o perfil "${v.profile_name}"? Ele sai do ranking dos pacientes, mas o cadastro e o histórico ficam guardados.`,
       )
     ) {
       return
     }
     setError(null)
     try {
-      await archiveRuleVersion(id)
+      await archiveRuleVersion(v.id)
       await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível desativar o perfil.')
     }
   }
 
-  const saveProfile = async (id: string, name: string, weight: number) => {
+  const remove = async (v: QualificationRuleVersion) => {
+    if (
+      !window.confirm(
+        `Remover definitivamente o perfil "${v.profile_name}"? Esta ação não pode ser desfeita. ` +
+          'Se ele já foi usado em avaliações, use Desativar.',
+      )
+    ) {
+      return
+    }
     setError(null)
     try {
-      await updateRuleVersion(id, { profileName: name, strategicWeight: weight })
-      setEditingWeight((prev) => {
-        const next = { ...prev }
-        delete next[id]
-        return next
-      })
-      setEditingName((prev) => {
-        const next = { ...prev }
-        delete next[id]
-        return next
-      })
+      await deleteRuleVersion(v.id)
+      if (editingId === v.id) resetDraft()
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Não foi possível salvar o perfil.')
+      setError(e instanceof Error ? e.message : 'Não foi possível remover o perfil.')
     }
   }
 
   const updateCriterion = (id: string, patch: Partial<RuleCriterion>) => {
-    setCriteria((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)))
+    setDraft((prev) => ({
+      ...prev,
+      criteria: prev.criteria.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+    }))
   }
 
   return (
@@ -216,10 +268,13 @@ export default function RegrasQualificacaoPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Novo perfil de paciente</CardTitle>
+          <CardTitle className="text-base">
+            {editingId ? 'Editar perfil de paciente' : 'Novo perfil de paciente'}
+          </CardTitle>
           <CardDescription>
-            Nomeie o perfil (ex.: “Particular · cirurgia eletiva”), dê o peso estratégico e defina
-            os critérios. A explicação da nota usa exatamente estes critérios.
+            {editingId
+              ? 'Altere o que precisar e salve. O perfil calibrado passa a valer na próxima avaliação dos pacientes.'
+              : 'Nomeie o perfil, dê o peso estratégico e defina os critérios. A explicação da nota usa exatamente estes critérios.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -228,8 +283,8 @@ export default function RegrasQualificacaoPage() {
               <Label htmlFor="profile-name">Nome do perfil *</Label>
               <Input
                 id="profile-name"
-                value={profileName}
-                onChange={(e) => setProfileName(e.target.value)}
+                value={draft.profileName}
+                onChange={(e) => setDraft((p) => ({ ...p, profileName: e.target.value }))}
                 placeholder="Ex.: Cirurgia particular de vesícula"
               />
             </div>
@@ -239,14 +294,16 @@ export default function RegrasQualificacaoPage() {
                 id="profile-weight"
                 type="number"
                 min={1}
-                value={strategicWeight}
-                onChange={(e) => setStrategicWeight(Number(e.target.value))}
+                value={draft.strategicWeight}
+                onChange={(e) =>
+                  setDraft((p) => ({ ...p, strategicWeight: Number(e.target.value) }))
+                }
               />
               <p className="text-xs text-muted-foreground">Maior = mais pretendido.</p>
             </div>
           </div>
 
-          {criteria.map((c, index) => (
+          {draft.criteria.map((c, index) => (
             <div
               key={c.id}
               className="grid gap-2 rounded-md border border-border p-3 sm:grid-cols-2"
@@ -276,9 +333,11 @@ export default function RegrasQualificacaoPage() {
                   <select
                     id={`crit-source-${c.id}`}
                     value={c.source}
-                    onChange={(e) =>
-                      updateCriterion(c.id, { source: e.target.value as RuleSource })
-                    }
+                    onChange={(e) => {
+                      const source = e.target.value as RuleSource
+                      // troca de origem limpa o valor: as listas são diferentes
+                      updateCriterion(c.id, { source, expected: '' })
+                    }}
                     className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
                   >
                     {SOURCES.map((s) => (
@@ -297,7 +356,7 @@ export default function RegrasQualificacaoPage() {
                       id={`crit-expected-${c.id}`}
                       value={c.expected}
                       onChange={(e) => updateCriterion(c.id, { expected: e.target.value })}
-                      placeholder="Ex.: Cirurgia (texto exato da resposta)"
+                      placeholder="Ex.: Cirurgia (texto exato da opção do formulário)"
                     />
                     <p className="text-xs text-muted-foreground">
                       Use exatamente o texto de uma opção do formulário.
@@ -319,19 +378,20 @@ export default function RegrasQualificacaoPage() {
                       ))}
                     </select>
                     <p className="text-xs text-muted-foreground">
-                      Lista fechada: é o valor que o sistema grava na ficha. Texto livre aqui faria
-                      o perfil nunca pontuar.
+                      Lista fechada: é o valor que o sistema grava na ficha.
                     </p>
                   </>
                 )}
               </div>
-              {criteria.length > 1 && (
+              {draft.criteria.length > 1 && (
                 <Button
                   variant="outline"
                   size="sm"
                   className="text-destructive sm:col-span-2"
                   aria-label={`Remover critério ${index + 1}`}
-                  onClick={() => setCriteria((prev) => prev.filter((x) => x.id !== c.id))}
+                  onClick={() =>
+                    setDraft((p) => ({ ...p, criteria: p.criteria.filter((x) => x.id !== c.id) }))
+                  }
                 >
                   Remover critério
                 </Button>
@@ -341,7 +401,7 @@ export default function RegrasQualificacaoPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCriteria((prev) => [...prev, emptyCriterion()])}
+            onClick={() => setDraft((p) => ({ ...p, criteria: [...p.criteria, emptyCriterion()] }))}
           >
             Adicionar critério
           </Button>
@@ -350,8 +410,8 @@ export default function RegrasQualificacaoPage() {
             <Label htmlFor="profile-target">Como atrair este perfil (opcional)</Label>
             <Input
               id="profile-target"
-              value={targetNotes}
-              onChange={(e) => setTargetNotes(e.target.value)}
+              value={draft.targetNotes}
+              onChange={(e) => setDraft((p) => ({ ...p, targetNotes: e.target.value }))}
               placeholder="Ex.: campanha no Google para vesícula particular em São Paulo"
             />
           </div>
@@ -359,8 +419,8 @@ export default function RegrasQualificacaoPage() {
             <Label htmlFor="rule-notes">Observações do perfil (opcional)</Label>
             <Input
               id="rule-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              value={draft.notes}
+              onChange={(e) => setDraft((p) => ({ ...p, notes: e.target.value }))}
               placeholder="Ex.: aprovado na conversa com o Dr. Ernesto"
             />
           </div>
@@ -369,9 +429,20 @@ export default function RegrasQualificacaoPage() {
               {formError}
             </p>
           )}
-          <Button onClick={submitDraft} disabled={saving}>
-            {saving ? 'Salvando…' : 'Salvar perfil como rascunho'}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={submit} disabled={saving}>
+              {saving
+                ? 'Salvando…'
+                : editingId
+                  ? 'Salvar alterações'
+                  : 'Salvar perfil como rascunho'}
+            </Button>
+            {editingId && (
+              <Button variant="outline" onClick={resetDraft} disabled={saving}>
+                Cancelar edição
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -400,7 +471,7 @@ export default function RegrasQualificacaoPage() {
       ) : (
         <div className="space-y-2">
           {versions.map((v) => (
-            <Card key={v.id}>
+            <Card key={v.id} className={editingId === v.id ? 'border-primary' : undefined}>
               <CardHeader className="pb-2">
                 <CardTitle className="flex flex-wrap items-center gap-2 text-base">
                   {v.profile_name || `Perfil v${v.version_number}`}
@@ -432,58 +503,28 @@ export default function RegrasQualificacaoPage() {
                   ))}
                 </ul>
                 {isAdmin && (
-                  <div className="flex flex-wrap items-end gap-2 pt-1">
-                    <div className="flex items-center gap-1">
-                      <Label htmlFor={`n-${v.id}`} className="text-xs">
-                        Nome
-                      </Label>
-                      <Input
-                        id={`n-${v.id}`}
-                        className="h-8 w-44"
-                        value={editingName[v.id] ?? v.profile_name ?? ''}
-                        onChange={(e) =>
-                          setEditingName((prev) => ({ ...prev, [v.id]: e.target.value }))
-                        }
-                      />
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Label htmlFor={`w-${v.id}`} className="text-xs">
-                        Peso
-                      </Label>
-                      <Input
-                        id={`w-${v.id}`}
-                        type="number"
-                        min={1}
-                        className="h-8 w-20"
-                        value={editingWeight[v.id] ?? v.strategic_weight}
-                        onChange={(e) =>
-                          setEditingWeight((prev) => ({ ...prev, [v.id]: Number(e.target.value) }))
-                        }
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          saveProfile(
-                            v.id,
-                            editingName[v.id] ?? v.profile_name ?? '',
-                            editingWeight[v.id] ?? v.strategic_weight,
-                          )
-                        }
-                      >
-                        Salvar
-                      </Button>
-                    </div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button size="sm" variant="outline" onClick={() => startEdit(v)}>
+                      Editar
+                    </Button>
                     {v.status === 'rascunho' && (
                       <Button size="sm" onClick={() => activate(v)} disabled={saving}>
                         Ativar perfil
                       </Button>
                     )}
                     {v.status === 'ativo' && (
-                      <Button size="sm" variant="outline" onClick={() => archive(v.id)}>
+                      <Button size="sm" variant="outline" onClick={() => archive(v)}>
                         Desativar
                       </Button>
                     )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive"
+                      onClick={() => remove(v)}
+                    >
+                      Remover
+                    </Button>
                   </div>
                 )}
               </CardContent>

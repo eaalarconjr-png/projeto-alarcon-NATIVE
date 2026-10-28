@@ -73,9 +73,14 @@ export default function ConfiguracoesPage() {
     }
     setSaving(true)
     try {
+      // correção 28/10: a tela não enviava horário/SLA/destinatário — os alertas nunca ligavam
       await updateClinicSettings({
         stage_labels: settings.stage_labels,
         credentialed_operators: operators,
+        business_hours_start: settings.business_hours_start || '',
+        business_hours_end: settings.business_hours_end || '',
+        sla_minutes: Number(settings.sla_minutes) || 0,
+        alert_recipient: settings.alert_recipient || '',
       })
       setSaved(true)
     } catch (e) {

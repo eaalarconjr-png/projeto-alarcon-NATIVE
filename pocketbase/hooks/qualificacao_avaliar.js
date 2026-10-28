@@ -82,14 +82,7 @@ routerAdd(
     // fora da lista vira "configuração inválida" — aparece, não zera em silêncio.
     const VALID_TARGETS = {
       modalidade: ['particular', 'convenio', 'reembolso'],
-      origem: [
-        'whatsapp',
-        'site',
-        'indicacao',
-        'convenio_app',
-        'outro',
-        'nao_identificado',
-      ],
+      origem: ['whatsapp', 'site', 'indicacao', 'convenio_app', 'outro', 'nao_identificado'],
     }
     const invalidCriteria = (criteria) => {
       const bad = []

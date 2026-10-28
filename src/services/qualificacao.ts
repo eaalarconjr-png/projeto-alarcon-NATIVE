@@ -313,3 +313,27 @@ export const archiveRuleVersion = async (id: string): Promise<void> => {
     throw new Error(getErrorMessage(error))
   }
 }
+
+/**
+ * Remove o perfil de vez (pedido do Dr., 28/10). Perfil já usado em alguma avaliação
+ * não pode ser apagado — o histórico da ficha ficaria sem referência. Nesse caso a
+ * mensagem orienta a desativar em vez de excluir.
+ */
+export const deleteRuleVersion = async (id: string): Promise<void> => {
+  const user = getCurrentUser()
+  if (!user) throw new Error('Sessão expirada. Entre novamente para continuar.')
+  if (user.role !== 'admin') {
+    throw new Error('Apenas o administrador pode remover um perfil de qualificação.')
+  }
+  try {
+    await pb.collection('qualification_rule_versions').delete(id)
+  } catch (error) {
+    const msg = getErrorMessage(error)
+    if (/relation|referenc|400/i.test(msg)) {
+      throw new Error(
+        'Este perfil já foi usado em avaliações de pacientes e não pode ser apagado sem perder o histórico. Use “Desativar” para tirá-lo do ranking.',
+      )
+    }
+    throw new Error(msg)
+  }
+}
