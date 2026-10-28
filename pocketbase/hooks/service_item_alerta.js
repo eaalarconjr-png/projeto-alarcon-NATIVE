@@ -1,83 +1,238 @@
-// task AL-F2-03: alertas internos de item atrasado — cron a cada 5 minutos.
-// Regras da SPEC: alerta só dentro do horário de funcionamento configurado (fora dele o
-// prazo retoma na próxima abertura); deduplicado por item e violação; sem prazo ou sem
-// horário configurado, nada dispara; SLA em minutos úteis quando configurado. Alerta é
-// interno ao aplicativo — nada é enviado ao WhatsApp nesta fase.
-cronAdd('fila_alertas_atraso', '*/5 * * * *', () => {
-  // 1. configuração da clínica (horário America/Sao_Paulo = UTC-3)
-  let start = ''
-  let end = ''
-  let sla = 0
+// AL-F2-03 revisado — pedido do Dr. Ernesto (28/10, 16:50): réguas de alerta EDITÁVEIS.
+// Antes o prazo era fixo no código. Agora o cron lê a coleção `alert_rules`: cada régua diz
+// quando disparar, para qual perfil de paciente, com que prioridade e qual a ação esperada.
+// O Dr. cria, edita, ativa/desativa e remove réguas pela tela — o motor não muda.
+// Regras mantidas da SPEC: alerta só dentro do horário de funcionamento; deduplicado por
+// item + régua enquanto não reconhecido; nada é enviado ao paciente (alerta é interno).
+const SP_OFFSET_MIN = -180 // America/Sao_Paulo = UTC-3
+
+const toMinutes = (hhmm) => {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim())
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null
+}
+
+const parseDate = (raw) => {
+  if (!raw) return null
+  const d = new Date(String(raw).replace(' ', 'T'))
+  return isNaN(d.getTime()) ? null : d
+}
+
+cronAdd('fila_alertas_atraso', '* * * * *', () => {
+  // 1. horário de funcionamento (editável pelo CEO em Configuração)
+  let startMin = null
+  let endMin = null
   let recipient = ''
   try {
     const s = $app.findFirstRecordByFilter('clinic_settings', "settings_key = 'main'")
-    start = s.getString('business_hours_start')
-    end = s.getString('business_hours_end')
-    sla = s.getInt('sla_minutes', 0)
+    startMin = toMinutes(s.getString('business_hours_start'))
+    endMin = toMinutes(s.getString('business_hours_end'))
     recipient = s.getString('alert_recipient')
   } catch (_) {}
-  if (!start || !end) {
-    return // horário não configurado: nenhum alerta (SPEC — informar não configurado)
-  }
+  if (startMin === null || endMin === null) return // sem horário: nada dispara
 
   const now = new Date()
-  const spMinutes = ((now.getUTCHours() - 3 + 24) % 24) * 60 + now.getUTCMinutes()
-  const toMin = (hhmm) => {
-    const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim())
-    return m ? Number(m[1]) * 60 + Number(m[2]) : null
-  }
-  const startMin = toMin(start)
-  const endMin = toMin(end)
-  if (startMin === null || endMin === null || spMinutes < startMin || spMinutes >= endMin) {
-    return // fora do horário: prazo retoma na próxima abertura
-  }
+  const spMinutes =
+    (((now.getUTCHours() * 60 + now.getUTCMinutes() + SP_OFFSET_MIN) % 1440) + 1440) % 1440
+  if (spMinutes < startMin || spMinutes >= endMin) return // fora do horário: retoma na abertura
 
-  // 2. itens abertos com prazo vencido (ou SLA configurado quando não há prazo manual)
-  const items = $app.findRecordsByFilter(
-    'service_items',
-    "status = 'pendente' || status = 'em_andamento'",
-    '',
-    200,
-    0,
-  )
-  for (const item of items) {
-    let deadlineMs = 0
-    const rawDeadline = item.getString('deadline_at')
-    if (rawDeadline) {
-      const parsed = new Date(rawDeadline.replace(' ', 'T'))
-      if (isNaN(parsed.getTime())) continue
-      deadlineMs = parsed.getTime()
-    } else if (sla > 0) {
-      const rawCreated = item.getString('created')
-      const parsedCreated = new Date(rawCreated.replace(' ', 'T'))
-      if (isNaN(parsedCreated.getTime())) continue
-      deadlineMs = parsedCreated.getTime() + sla * 60000
-    } else {
-      continue // sem prazo e sem SLA: não configurado para este item
-    }
-    if (deadlineMs > now.getTime()) continue // ainda dentro do prazo
+  // 2. réguas ativas
+  let rules = []
+  try {
+    rules = $app.findRecordsByFilter('alert_rules', 'active = true', '-priority', 200, 0)
+  } catch (_) {
+    return
+  }
+  if (!rules || rules.length === 0) return
 
-    // 3. deduplicação: um alerta não reconhecido por item e violação
+  const alertedKeys = {}
+  const alreadyAlerted = (key) => {
+    if (alertedKeys[key]) return true
     const open = $app.findRecordsByFilter(
       'internal_alerts',
-      'item = {:i} && violation = {:v} && acknowledged_at = ""',
+      'dedupe_key = {:k} && acknowledged_at = ""',
       '',
       1,
       0,
-      { i: item.id, v: 'atrasado' },
+      { k: key },
     )
-    if (open.length > 0) continue
-
-    const alert = new Record($app.findCollectionByNameOrId('internal_alerts'))
-    alert.set('item', item.id)
-    alert.set('violation', 'atrasado')
-    alert.set(
-      'message',
-      'Item atrasado: "' + item.getString('title') + '" passou do prazo de atendimento.',
-    )
-    if (recipient) {
-      alert.set('recipient', recipient)
+    if (open.length > 0) {
+      alertedKeys[key] = true
+      return true
     }
+    return false
+  }
+
+  const makeAlert = (op, item, rule, message, dueAt) => {
+    const key = (item ? item.id : op.id) + '|' + rule.id
+    if (alreadyAlerted(key)) return
+    const alert = new Record($app.findCollectionByNameOrId('internal_alerts'))
+    if (item) alert.set('item', item.id)
+    alert.set('violation', rule.getString('kind'))
+    alert.set('dedupe_key', key)
+    alert.set('message', message)
+    alert.set('rule', rule.id)
+    if (dueAt) alert.set('due_at', dueAt.toISOString())
+    if (recipient) alert.set('recipient', recipient)
     $app.save(alert)
+    alertedKeys[key] = true
+  }
+
+  // perfil do paciente a partir da modalidade (e do plano, quando convênio)
+  const profileOf = (op) => {
+    const mod = op.getString('modality')
+    if (mod === 'reembolso') return 'reembolso'
+    if (mod === 'particular') return 'particular'
+    if (mod === 'convenio') return 'convenio'
+    return 'particular'
+  }
+  const ruleCoversProfile = (rule, profile) => {
+    const target = rule.getString('applies_to')
+    if (!target || target === 'todos') return true
+    if (target === 'clinico_particular') return profile === 'particular'
+    if (target === 'clinico_porto') return profile === 'convenio'
+    return target === profile
+  }
+
+  const opportunities = $app.findRecordsByFilter('opportunities', '', '-updated', 500, 0)
+  const openItems = $app.findRecordsByFilter(
+    'service_items',
+    "status = 'pendente' || status = 'em_andamento'",
+    '',
+    500,
+    0,
+  )
+  const itemsByOp = {}
+  for (const it of openItems) {
+    const o = it.getString('opportunity')
+    if (!itemsByOp[o]) itemsByOp[o] = []
+    itemsByOp[o].push(it)
+  }
+
+  for (const rule of rules) {
+    const kind = rule.getString('kind')
+    const threshold = rule.getInt('threshold_minutes', 0)
+    if (!threshold || threshold <= 0) continue
+    const thresholdMs = threshold * 60000
+    const hint = rule.getString('action_hint')
+    const ruleName = rule.getString('name')
+
+    for (const op of opportunities) {
+      if (op.getString('status') === 'encerrada') continue
+      const profile = profileOf(op)
+      if (!ruleCoversProfile(rule, profile)) continue
+
+      if (kind === 'sem_interacao') {
+        // último contato/atividade da oportunidade sem resposta declarada
+        const items = itemsByOp[op.id] || []
+        let reference = null
+        let referenceItem = null
+        for (const it of items) {
+          if (it.getString('first_human_response_at')) continue // já respondido
+          const last =
+            parseDate(it.getString('last_activity_at')) || parseDate(it.getString('created'))
+          if (!last) continue
+          if (!reference || last.getTime() > reference.getTime()) {
+            reference = last
+            referenceItem = it
+          }
+        }
+        if (!reference) {
+          // sem item de fila: usa a criação da oportunidade
+          reference = parseDate(op.getString('created'))
+          referenceItem = null
+        }
+        if (!reference) continue
+        const due = new Date(reference.getTime() + thresholdMs)
+        if (due.getTime() > now.getTime()) continue
+        const nome = op.getString('interest') || 'paciente'
+        makeAlert(
+          op,
+          referenceItem,
+          rule,
+          `${ruleName}: ${nome} sem interação nossa há ${threshold} min. ${hint}`,
+          due,
+        )
+      } else if (kind === 'antes_consulta') {
+        // consulta marcada (status solicitado ou confirmado) cuja hora está a X do agora
+        let events = []
+        try {
+          events = $app.findRecordsByFilter(
+            'agenda_events',
+            "opportunity = {:o} && type = 'consulta' && (status = 'solicitado' || status = 'confirmado')",
+            'event_at',
+            20,
+            0,
+            { o: op.id },
+          )
+        } catch (_) {}
+        for (const ev of events) {
+          const when = parseDate(ev.getString('event_at'))
+          if (!when) continue
+          const diff = when.getTime() - now.getTime()
+          if (diff <= 0) continue // já passou
+          // dispara quando entra na janela de antecedência
+          if (diff > thresholdMs) continue
+          makeAlert(
+            op,
+            null,
+            rule,
+            `${ruleName}: consulta de ${op.getString('interest') || 'paciente'} em ${Math.round(diff / 3600000)}h. ${hint}`,
+            when,
+          )
+        }
+      } else if (kind === 'pos_atendimento') {
+        // atendimento realizado e nenhum contato nosso depois dele
+        let events = []
+        try {
+          events = $app.findRecordsByFilter(
+            'agenda_events',
+            "opportunity = {:o} && status = 'realizado'",
+            '-event_at',
+            5,
+            0,
+            { o: op.id },
+          )
+        } catch (_) {}
+        if (events.length === 0) continue
+        const done = parseDate(events[0].getString('event_at'))
+        if (!done) continue
+        if (done.getTime() + thresholdMs > now.getTime()) continue
+        const lastContact = parseDate(op.getString('updated'))
+        if (lastContact && lastContact.getTime() > done.getTime()) continue // já houve interação
+        makeAlert(
+          op,
+          null,
+          rule,
+          `${ruleName}: ${op.getString('interest') || 'paciente'} atendido — contatar para feedback. ${hint}`,
+          new Date(done.getTime() + thresholdMs),
+        )
+      } else if (kind === 'retorno') {
+        // tempo desde a última passagem na clínica (última atualização ou último evento)
+        let reference = parseDate(op.getString('updated'))
+        try {
+          const evs = $app.findRecordsByFilter(
+            'agenda_events',
+            'opportunity = {:o}',
+            '-event_at',
+            1,
+            0,
+            { o: op.id },
+          )
+          if (evs.length > 0) {
+            const last = parseDate(evs[0].getString('event_at'))
+            if (last && (!reference || last.getTime() > reference.getTime())) reference = last
+          }
+        } catch (_) {}
+        if (!reference) continue
+        if (reference.getTime() + thresholdMs > now.getTime()) continue
+        makeAlert(
+          op,
+          null,
+          rule,
+          `${ruleName}: ${op.getString('interest') || 'paciente'} sem passar na clínica há ${Math.round(threshold / 1440)} dias. ${hint}`,
+          new Date(reference.getTime() + thresholdMs),
+        )
+      }
+    }
   }
 })

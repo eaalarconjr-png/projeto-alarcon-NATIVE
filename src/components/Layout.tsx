@@ -17,6 +17,7 @@ export default function Layout() {
     { to: '/regras', label: 'Qualificação', gestor: false },
     { to: '/fila', label: 'Fila', gestor: false },
     { to: '/agenda', label: 'Agenda', gestor: false },
+    { to: '/alertas', label: 'Alertas', gestor: false },
     { to: '/formularios', label: 'Formulários', gestor: true },
     { to: '/configuracoes', label: 'Configuração', gestor: true },
   ].filter((item) => !isGestor || item.gestor)
