@@ -25,7 +25,10 @@ export const PLAN_PATH_LABELS: Record<PlanPath, string> = {
   revisao: 'Revisão humana',
 }
 
-export type RuleSource = 'modalidade' | 'origem' | 'resposta'
+// 'cuidado' foi acrescentado em 28/10: sem ele, "Cirúrgico Porto Saúde" e "Clínico da Porto
+// Saúde" ficam com critérios idênticos (modalidade = convenio) e empatam sempre — o ranking
+// vira sorteio do peso. O tipo de cuidado separa cirúrgico de clínico.
+export type RuleSource = 'modalidade' | 'origem' | 'cuidado' | 'resposta'
 
 /**
  * Valores VÁLIDOS de cada origem de dado — os mesmos gravados na ficha da oportunidade.
@@ -199,7 +202,7 @@ const validateRule = (data: RuleVersionInput) => {
     if (!c.expected.trim()) {
       throw new Error(`O critério "${c.label}" precisa do valor esperado.`)
     }
-    if (c.source === 'modalidade' || c.source === 'origem') {
+    if (c.source === 'modalidade' || c.source === 'origem' || c.source === 'cuidado') {
       const allowed = CRITERION_TARGETS[c.source].map((t) => t.value)
       if (!allowed.includes(c.expected.trim())) {
         throw new Error(

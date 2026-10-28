@@ -83,6 +83,7 @@ routerAdd(
     const VALID_TARGETS = {
       modalidade: ['particular', 'convenio', 'reembolso'],
       origem: ['whatsapp', 'site', 'indicacao', 'convenio_app', 'outro', 'nao_identificado'],
+      cuidado: ['cirurgico', 'clinico'],
     }
     const invalidCriteria = (criteria) => {
       const bad = []
@@ -123,6 +124,8 @@ routerAdd(
           value = op.getString('modality')
         } else if (c.source === 'origem') {
           value = op.getString('origin_declared')
+        } else if (c.source === 'cuidado') {
+          value = op.getString('care_type')
         } else {
           for (const a of answerValues) {
             if (norm(a.value) === expected || a.labels.some((l) => norm(l) === expected)) {

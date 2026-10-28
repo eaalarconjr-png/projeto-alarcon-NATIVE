@@ -20,6 +20,7 @@ import { getCurrentUser } from '@/services/auth'
 
 const SOURCES: { value: RuleSource; label: string }[] = [
   { value: 'modalidade', label: 'Modalidade da oportunidade' },
+  { value: 'cuidado', label: 'Tipo de cuidado (cirúrgico/clínico)' },
   { value: 'origem', label: 'Origem declarada' },
   { value: 'resposta', label: 'Resposta do formulário' },
 ]
