@@ -26,12 +26,18 @@ cronAdd('fila_alertas_atraso', '* * * * *', () => {
     endMin = toMinutes(s.getString('business_hours_end'))
     recipient = s.getString('alert_recipient')
   } catch (_) {}
-  if (startMin === null || endMin === null) return // sem horário: nada dispara
+  if (startMin === null || endMin === null) {
+    console.log('alertas: horario de funcionamento nao configurado')
+    return
+  }
 
   const now = new Date()
   const spMinutes =
     (((now.getUTCHours() * 60 + now.getUTCMinutes() + SP_OFFSET_MIN) % 1440) + 1440) % 1440
-  if (spMinutes < startMin || spMinutes >= endMin) return // fora do horário: retoma na abertura
+  if (spMinutes < startMin || spMinutes >= endMin) {
+    console.log('alertas: fora do horario sp=' + spMinutes + ' janela=' + startMin + '-' + endMin)
+    return
+  }
 
   // 2. réguas ativas
   let rules = []
@@ -40,7 +46,10 @@ cronAdd('fila_alertas_atraso', '* * * * *', () => {
   } catch (_) {
     return
   }
-  if (!rules || rules.length === 0) return
+  if (!rules || rules.length === 0) {
+    console.log('alertas: nenhuma régua ativa')
+    return
+  }
 
   const alertedKeys = {}
   const alreadyAlerted = (key) => {
@@ -121,6 +130,7 @@ cronAdd('fila_alertas_atraso', '* * * * *', () => {
       if (!ruleCoversProfile(rule, profile)) continue
 
       if (kind === 'sem_interacao') {
+        console.log('alertas: avaliando ' + ruleName + ' para ' + op.id + ' perfil=' + profile)
         // último contato/atividade da oportunidade sem resposta declarada
         const items = itemsByOp[op.id] || []
         let reference = null
