@@ -84,10 +84,24 @@ routerAdd(
       }
     } catch (_) {}
 
+    // JSVM não transpila spread ({...obj}) — monta o objeto campo a campo
+    const withImports = []
+    for (const c of result) {
+      withImports.push({
+        platform: c.platform,
+        label: c.label,
+        status: c.status,
+        credentials_present: c.credentials_present,
+        credentials_missing: c.credentials_missing,
+        docs_hint: c.docs_hint,
+        last_import: syncState[c.platform] || null,
+      })
+    }
+
     return e.json(200, {
       generated_at: new Date().toISOString(),
       read_only: true,
-      channels: result.map((c) => ({ ...c, last_import: syncState[c.platform] || null })),
+      channels: withImports,
       fallback: {
         available: true,
         how: 'Importação de CSV pelo painel (AL-F3-02) — funciona sem qualquer acesso de mídia.',
