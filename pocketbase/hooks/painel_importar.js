@@ -145,9 +145,55 @@ routerAdd(
       return d.toISOString().replace('T', ' ')
     }
 
-    for (const row of rows) {
+    // A confirmação NÃO confia em valor pré-calculado pelo cliente: recebe as linhas cruas e
+    // aplica a mesma validação da prévia. Convertemos o investimento aqui para que a gravação
+    // seja sempre correta, mesmo que o cliente envie apenas `spend`.
+    const validPlatforms = ['google', 'meta', 'instagram', 'outro']
+    const normalize = (r) => {
+      const platform = String(r.platform || '')
+        .trim()
+        .toLowerCase()
+      const account_id = String(r.account_id || '').trim()
+      const campaign_id = String(r.campaign_id || '').trim()
+      const currency = String(r.currency || '')
+        .trim()
+        .toUpperCase()
+      const dayKey = pbDay(r.day)
+      const spend =
+        r.spend !== undefined
+          ? r.spend
+          : r.spend_cents !== undefined
+            ? Number(r.spend_cents) / 100
+            : ''
+      if (!validPlatforms.includes(platform)) return null
+      if (!account_id || !campaign_id || !dayKey) return null
+      if (!/^[A-Z]{3}$/.test(currency)) return null
+      if (spend === '' || spend === null || spend === undefined) return null
+      const cents = Math.round(Number(spend) * 100)
+      if (isNaN(cents) || cents < 0) return null
+      return {
+        platform,
+        account_id,
+        account_name: String(r.account_name || '').trim(),
+        campaign_id,
+        campaign_name: String(r.campaign_name || '').trim(),
+        day: dayKey,
+        currency,
+        spend_cents: cents,
+        impressions: Number(r.impressions) >= 0 ? Math.round(Number(r.impressions)) : 0,
+        clicks: Number(r.clicks) >= 0 ? Math.round(Number(r.clicks)) : 0,
+        platform_leads: Number(r.platform_leads) >= 0 ? Math.round(Number(r.platform_leads)) : 0,
+      }
+    }
+
+    for (const rawRow of rows) {
+      const row = normalize(rawRow)
+      if (!row) {
+        failed++
+        continue
+      }
       try {
-        const dayKey = pbDay(row.day)
+        const dayKey = row.day
         const found = $app.findRecordsByFilter(
           'media_daily',
           'platform = {:p} && account_id = {:a} && campaign_id = {:c} && day = {:d} && source_kind = "import"',
