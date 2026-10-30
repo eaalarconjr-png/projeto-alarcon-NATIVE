@@ -4,7 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { fetchPainel, fmtBRL, fmtNum, type PainelData } from '@/services/painel'
+import {
+  askAnalysis,
+  fetchPainel,
+  fmtBRL,
+  fmtNum,
+  type AnaliseResult,
+  type PainelData,
+} from '@/services/painel'
 import { getClinicSettings } from '@/services/crm'
 
 const STAGE_LABELS_FALLBACK: Record<string, string> = {
@@ -38,6 +45,22 @@ export default function PainelPage() {
   const [from, setFrom] = useState(isoDay(new Date(Date.now() - 30 * 86400000)))
   const [to, setTo] = useState(isoDay(new Date()))
   const [stageLabels, setStageLabels] = useState<Record<string, string>>(STAGE_LABELS_FALLBACK)
+  const [question, setQuestion] = useState('')
+  const [analise, setAnalise] = useState<AnaliseResult | null>(null)
+  const [asking, setAsking] = useState(false)
+  const [askError, setAskError] = useState<string | null>(null)
+
+  const ask = async () => {
+    setAsking(true)
+    setAskError(null)
+    try {
+      setAnalise(await askAnalysis(question, from, to))
+    } catch (e) {
+      setAskError(e instanceof Error ? e.message : 'Não foi possível analisar agora.')
+    } finally {
+      setAsking(false)
+    }
+  }
 
   const load = async () => {
     setLoading(true)
@@ -392,6 +415,63 @@ export default function PainelPage() {
                   </p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+          {/* ---------- assistente ---------- */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Assistente de análise</CardTitle>
+              <CardDescription>
+                Explica os números do período usando apenas os agregados do painel — sem acesso a
+                fichas, conversas ou dados de pacientes. Não altera mídia nem decide por você.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  placeholder="Ex.: por que a conversão caiu neste período?"
+                  className="max-w-md"
+                />
+                <Button onClick={ask} disabled={asking}>
+                  {asking ? 'Analisando…' : 'Pedir análise'}
+                </Button>
+              </div>
+              {askError && (
+                <p className="text-sm text-destructive" role="alert">
+                  {askError}
+                </p>
+              )}
+              {analise && (
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <p className="font-medium">Números do período</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
+                      {analise.facts.map((f, i) => (
+                        <li key={i}>{f}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-medium">Hipóteses (não são causas provadas)</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
+                      {analise.hypotheses.map((h, i) => (
+                        <li key={i}>{h}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-medium">Próxima investigação</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
+                      {analise.next_steps.map((n, i) => (
+                        <li key={i}>{n}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{analise.limitation}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </>

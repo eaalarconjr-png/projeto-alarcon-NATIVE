@@ -70,6 +70,33 @@ export const fetchPainel = async (filters: PainelFilters = {}): Promise<PainelDa
   }
 }
 
+export interface AnaliseResult {
+  period: { from: string; to: string }
+  question: string
+  facts: string[]
+  hypotheses: string[]
+  next_steps: string[]
+  limitation: string
+  engine: string
+}
+
+/** AL-F3-04: assistente consultivo — só agregados, nunca dado de paciente. */
+export const askAnalysis = async (
+  question: string,
+  from: string,
+  to: string,
+): Promise<AnaliseResult> => {
+  try {
+    const res = await pb.send('/backend/v1/painel/analise', {
+      method: 'POST',
+      body: { question, from, to },
+    })
+    return res as unknown as AnaliseResult
+  } catch (error) {
+    throw new Error(getErrorMessage(error))
+  }
+}
+
 export const fmtBRL = (cents: number | null | undefined): string =>
   typeof cents === 'number'
     ? (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
