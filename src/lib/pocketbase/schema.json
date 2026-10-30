@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-28T20:20:42.222Z",
+  "generatedAt": "2026-10-30T12:48:45.811Z",
   "collections": [
     {
       "name": "users",
@@ -791,6 +791,12 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "cpa_target_cents",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -1306,6 +1312,295 @@
       ],
       "indexes": [
         "CREATE INDEX idx_alert_rules_active ON alert_rules (active)"
+      ]
+    },
+    {
+      "name": "media_daily",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "platform",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "google",
+            "meta",
+            "instagram",
+            "outro"
+          ]
+        },
+        {
+          "name": "account_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "account_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "campaign_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "campaign_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "day",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "spend_cents",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impressions",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "clicks",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "platform_leads",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source_kind",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "import",
+            "api"
+          ]
+        },
+        {
+          "name": "import_batch",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_media_daily_key ON media_daily (platform, account_id, campaign_id, day, source_kind)",
+        "CREATE INDEX idx_media_daily_day ON media_daily (day)"
+      ]
+    },
+    {
+      "name": "media_imports",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "filename",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "platform",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "period_start",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "period_end",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rows_total",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rows_accepted",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rows_rejected",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rejected_sample",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "imported_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "channel_targets",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "platform",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "google",
+            "meta",
+            "instagram",
+            "outro"
+          ]
+        },
+        {
+          "name": "monthly_budget_cents",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate"
+          ]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_channel_targets_platform ON channel_targets (platform)"
       ]
     }
   ]
