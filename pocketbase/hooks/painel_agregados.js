@@ -137,7 +137,7 @@ routerAdd(
       // tempo de PRIMEIRA AÇÃO no CRM (não é resposta ao paciente)
       const created = it.getString('created')
       const firstAction = it.getString('first_action_at')
-      if (created && firstAction && !acaoMediaMin === false) {
+      if (created && firstAction) {
         const c = new Date(String(created).replace(' ', 'T'))
         const a = new Date(String(firstAction).replace(' ', 'T'))
         if (!isNaN(c.getTime()) && !isNaN(a.getTime()) && a.getTime() >= c.getTime()) {
@@ -162,8 +162,15 @@ routerAdd(
     // ---------- 6. mídia e custos (ausente = indisponível, nunca zero) ----------
     const mediaRows = $app.findRecordsByFilter('media_daily', '', '-day', 5000, 0)
     const inMediaPeriod = (row) => {
-      const d = new Date(String(row.getString('day')).replace(' ', 'T'))
-      return !isNaN(d.getTime()) && d.getTime() >= start.getTime() && d.getTime() <= end.getTime()
+      // PocketBase grava a data como "AAAA-MM-DD 00:00:00.000Z"; normaliza antes de comparar
+      const raw = String(row.getString('day') || '')
+        .replace(' ', 'T')
+        .trim()
+      if (!raw) return false
+      const d = new Date(raw.endsWith('Z') || raw.includes('+') ? raw : raw + 'Z')
+      if (isNaN(d.getTime())) return false
+      const t = d.getTime()
+      return t >= start.getTime() && t <= end.getTime()
     }
     const byChannel = {}
     const currencies = {}
@@ -185,6 +192,7 @@ routerAdd(
         }
       }
       byChannel[p].spend_cents += row.getInt('spend_cents', 0)
+      spendTotalCents += row.getInt('spend_cents', 0)
       byChannel[p].impressions += row.getInt('impressions', 0)
       byChannel[p].clicks += row.getInt('clicks', 0)
       byChannel[p].platform_leads += row.getInt('platform_leads', 0)

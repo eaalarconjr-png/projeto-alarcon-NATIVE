@@ -137,15 +137,24 @@ routerAdd(
     let updated = 0
     let failed = 0
 
+    // normaliza o dia no formato do PocketBase ("AAAA-MM-DD 00:00:00.000Z") para que a
+    // comparação de chave encontre o registro existente — sem isso a reimportação duplicaria
+    const pbDay = (raw) => {
+      const d = new Date(String(raw || '').replace(' ', 'T'))
+      if (isNaN(d.getTime())) return ''
+      return d.toISOString().replace('T', ' ')
+    }
+
     for (const row of rows) {
       try {
+        const dayKey = pbDay(row.day)
         const found = $app.findRecordsByFilter(
           'media_daily',
           'platform = {:p} && account_id = {:a} && campaign_id = {:c} && day = {:d} && source_kind = "import"',
           '',
           1,
           0,
-          { p: row.platform, a: row.account_id, c: row.campaign_id, d: row.day },
+          { p: row.platform, a: row.account_id, c: row.campaign_id, d: dayKey },
         )
         if (found.length > 0) {
           // MESMA chave = atualiza, nunca soma. É o que impede dupla contagem.
@@ -167,7 +176,7 @@ routerAdd(
           rec.set('account_name', row.account_name || '')
           rec.set('campaign_id', row.campaign_id)
           rec.set('campaign_name', row.campaign_name || '')
-          rec.set('day', row.day)
+          rec.set('day', dayKey)
           rec.set('currency', row.currency)
           rec.set('spend_cents', Math.round(Number(row.spend_cents) || 0))
           rec.set('impressions', row.impressions || 0)
