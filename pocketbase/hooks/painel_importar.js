@@ -150,7 +150,7 @@ routerAdd(
         if (found.length > 0) {
           // MESMA chave = atualiza, nunca soma. É o que impede dupla contagem.
           const rec = found[0]
-          rec.set('spend_cents', row.spend_cents || 0)
+          rec.set('spend_cents', Math.round(Number(row.spend_cents) || 0))
           rec.set('impressions', row.impressions || 0)
           rec.set('clicks', row.clicks || 0)
           rec.set('platform_leads', row.platform_leads || 0)
@@ -169,7 +169,7 @@ routerAdd(
           rec.set('campaign_name', row.campaign_name || '')
           rec.set('day', row.day)
           rec.set('currency', row.currency)
-          rec.set('spend_cents', row.spend_cents || 0)
+          rec.set('spend_cents', Math.round(Number(row.spend_cents) || 0))
           rec.set('impressions', row.impressions || 0)
           rec.set('clicks', row.clicks || 0)
           rec.set('platform_leads', row.platform_leads || 0)
