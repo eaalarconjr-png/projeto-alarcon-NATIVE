@@ -12,6 +12,7 @@ export default function Layout() {
   const isGestor = role === 'gestor_trafego'
   const navItems = [
     { to: '/painel', label: 'Painel', gestor: true },
+    { to: '/midia', label: 'Mídia', gestor: true },
     { to: '/', label: 'Oportunidades', gestor: true },
     { to: '/contatos/novo', label: 'Novo contato', gestor: true },
     { to: '/convenios', label: 'Convênios', gestor: false },
