@@ -20,6 +20,7 @@ import RegrasQualificacaoPage from './pages/RegrasQualificacao'
 import FilaPage from './pages/Fila'
 import AgendaPage from './pages/Agenda'
 import AlertasPage from './pages/Alertas'
+import PainelPage from './pages/Painel'
 import RequireAuth from './components/RequireAuth'
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
@@ -87,6 +88,14 @@ const App = () => (
             element={
               <RequireAuth>
                 <AgendaPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/painel"
+            element={
+              <RequireAuth>
+                <PainelPage />
               </RequireAuth>
             }
           />
