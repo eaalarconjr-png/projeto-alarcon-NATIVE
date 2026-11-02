@@ -7,6 +7,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   AUTHOR_LABEL,
   attachmentUrl,
+  decideSummary,
+  requestSummary,
+  type SummaryResult,
   isWindowOpen,
   LINK_STATE_LABEL,
   linkConversation,
@@ -65,6 +68,38 @@ export default function ConversasPage() {
   const [sending, setSending] = useState(false)
   const [team, setTeam] = useState<{ id: string; name: string; role: string }[]>([])
   const [transferTo, setTransferTo] = useState('')
+  const [summary, setSummary] = useState<SummaryResult | null>(null)
+  const [summarizing, setSummarizing] = useState(false)
+
+  const askSummary = async () => {
+    if (!selected) return
+    setSummarizing(true)
+    setError(null)
+    setSummary(null)
+    try {
+      setSummary(await requestSummary(selected))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível resumir agora.')
+    } finally {
+      setSummarizing(false)
+    }
+  }
+
+  const decide = async (action: 'aceitar' | 'recusar') => {
+    if (!summary || !summary.summary_id) return
+    try {
+      await decideSummary(summary.summary_id, action)
+      setFeedback(
+        action === 'aceitar'
+          ? 'Sugestão aceita e registrada com o seu nome.'
+          : 'Sugestão recusada. Nada foi alterado.',
+      )
+      setSummary(null)
+      await loadList()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível registrar a decisão.')
+    }
+  }
 
   const loadList = async (f: ConversationFilter = filter) => {
     setLoading(true)

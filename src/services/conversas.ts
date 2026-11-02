@@ -211,6 +211,53 @@ export const sendReply = async (
   }
 }
 
+export interface SummaryResult {
+  ok?: boolean
+  summary_id?: string
+  summary?: string
+  points?: { message_id: string; texto: string }[]
+  suggested_stage?: string
+  justification?: string
+  clinical_signal?: boolean
+  error?: string
+  message?: string
+  skipped?: boolean
+  reason?: string
+}
+
+/**
+ * AL-F4-05: pede um resumo à IA. A IA só SUGERE — nada muda na ficha sem decisão humana.
+ * Sem IA configurada, devolve uma mensagem clara e a caixa continua funcionando.
+ */
+export const requestSummary = async (conversationId: string): Promise<SummaryResult> => {
+  requireInbox()
+  try {
+    const res = await pb.send(`/backend/v1/conversas/${conversationId}/resumir`, {
+      method: 'POST',
+      body: {},
+    })
+    return res as unknown as SummaryResult
+  } catch (error) {
+    throw new Error(getErrorMessage(error))
+  }
+}
+
+export const decideSummary = async (
+  summaryId: string,
+  action: 'aceitar' | 'recusar' | 'trocar',
+  stage?: string,
+): Promise<void> => {
+  requireInbox()
+  try {
+    await pb.send(`/backend/v1/conversas/resumo/${summaryId}/decidir`, {
+      method: 'POST',
+      body: { action, stage: stage || '' },
+    })
+  } catch (error) {
+    throw new Error(getErrorMessage(error))
+  }
+}
+
 export const attachmentUrl = (messageId: string): string =>
   `${pb.baseUrl}/backend/v1/whatsapp/mensagens/${messageId}/anexo`
 
