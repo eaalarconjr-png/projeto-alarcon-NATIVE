@@ -24,6 +24,14 @@ routerAdd(
     if (conns.length === 0) return e.badRequestError('Crie a conexão fixture primeiro.')
     const conn = conns[0]
 
+    if (b.window_expired_conversation !== undefined) {
+      // força a janela de 24 h vencida numa conversa, para provar a recusa de envio
+      try {
+        const cv = $app.findRecordById('conversations', String(b.window_expired_conversation))
+        cv.set('window_expires_at', new Date(Date.now() - 3600000).toISOString())
+        $app.save(cv)
+      } catch (_) {}
+    }
     if (b.status !== undefined) conn.set('status', String(b.status))
     if (b.greeting_mode !== undefined) conn.set('greeting_mode', String(b.greeting_mode))
     if (b.greeting_text_open !== undefined)
