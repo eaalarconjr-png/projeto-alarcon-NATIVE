@@ -181,10 +181,12 @@ export default function OportunidadesPage() {
               .expand?.contact
             const own = (o as unknown as { expand?: { owner?: { name?: string } } }).expand?.owner
             return (
-              <Card key={o.id}>
+              <Card key={o.id} className="transition-colors hover:border-primary/40">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">
-                    {c?.name ?? 'Contato'} · {o.interest}
+                    <Link to={`/oportunidades/${o.id}`} className="hover:underline">
+                      {c?.name ?? 'Contato'} · {o.interest}
+                    </Link>
                   </CardTitle>
                   <CardDescription>
                     {c?.phone ?? '—'} · {MODALITY_LABELS[o.modality] ?? (o.modality || '—')} ·
@@ -197,6 +199,9 @@ export default function OportunidadesPage() {
                     {STAGE_LABELS[o.stage] ?? o.stage}
                   </span>
                   <span className="text-muted-foreground">Atualizada em {fmtDate(o.updated)}</span>
+                  <Button asChild size="sm" variant="outline" className="ml-auto">
+                    <Link to={`/oportunidades/${o.id}`}>Abrir ficha</Link>
+                  </Button>
                 </CardContent>
               </Card>
             )

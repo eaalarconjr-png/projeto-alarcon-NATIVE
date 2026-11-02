@@ -31,6 +31,12 @@ const MODALITIES = [
   { value: 'reembolso', label: 'Reembolso' },
 ]
 
+// Distinção que as réguas de alerta usam: cirúrgico tem prazo curto, clínico tem prazo maior.
+const CARE_TYPES = [
+  { value: 'cirurgico', label: 'Cirúrgico' },
+  { value: 'clinico', label: 'Clínico' },
+]
+
 /**
  * Cadastro manual de contato e abertura de oportunidade (AL-F1-02).
  * Pessoa é diferente de oportunidade: a mesma pessoa pode ter várias jornadas.
@@ -43,6 +49,7 @@ export default function NovoContatoPage() {
   const [origin, setOrigin] = useState('site')
   const [interest, setInterest] = useState('')
   const [modality, setModality] = useState('particular')
+  const [careType, setCareType] = useState('cirurgico')
   const [team, setTeam] = useState<TeamMember[]>([])
   const [owner, setOwner] = useState('')
 
@@ -94,6 +101,7 @@ export default function NovoContatoPage() {
         contact: contact.id,
         interest,
         modality,
+        care_type: careType,
         owner,
         origin_declared: origin,
       })
@@ -294,6 +302,24 @@ export default function NovoContatoPage() {
               </select>
               <p className="text-xs text-muted-foreground">
                 Ter convênio não elimina a jornada particular — as duas podem existir.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="care-type">Tipo de cuidado</Label>
+              <select
+                id="care-type"
+                value={careType}
+                onChange={(e) => setCareType(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+              >
+                {CARE_TYPES.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Define o prazo de resposta: cirúrgico é prioritário.
               </p>
             </div>
             <div className="space-y-2">
