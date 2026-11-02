@@ -22,6 +22,7 @@ import AgendaPage from './pages/Agenda'
 import AlertasPage from './pages/Alertas'
 import PainelPage from './pages/Painel'
 import MidiaPage from './pages/Midia'
+import WhatsAppPage from './pages/WhatsApp'
 import RequireAuth from './components/RequireAuth'
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
@@ -97,6 +98,14 @@ const App = () => (
             element={
               <RequireAuth>
                 <PainelPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/whatsapp"
+            element={
+              <RequireAuth>
+                <WhatsAppPage />
               </RequireAuth>
             }
           />
