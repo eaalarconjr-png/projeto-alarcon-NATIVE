@@ -234,6 +234,69 @@ routerAdd(
                 : 'sem investimento importado no período',
           }
 
+    // ---------- 7. tempos do canal WhatsApp (RN-25, AL-F4-04) ----------
+    // Linhas SEPARADAS: resposta humana real, resposta automática, ação no CRM e declarada.
+    // Sem dado real no período → "indisponível", nunca zero.
+    let realMin = null
+    let realCount = 0
+    let realDeclared = 0
+    const realBuckets = { ate_30min: 0, ate_1h: 0, acima_1h: 0 }
+    let autoCount = 0
+    let esperasAbertas = 0
+    let coberturaM = 0
+    const waItens = []
+    try {
+      for (const it of items) {
+        const isWa = it.getString('channel') === 'whatsapp'
+        const waitStart = it.getString('wait_started_at')
+        const replyAt = it.getString('first_human_reply_at')
+        const declAt = it.getString('first_human_response_at')
+
+        // cobertura: M = esperas do período que já tiveram resposta real ou declarada
+        if (waitStart && inPeriod(waitStart)) {
+          if (replyAt || declAt) coberturaM++
+          if (replyAt) {
+            realCount++
+            if (it.getString('first_human_reply_source') === 'celular_declarado') realDeclared++
+            const a = new Date(String(waitStart).replace(' ', 'T'))
+            const b = new Date(String(replyAt).replace(' ', 'T'))
+            if (!isNaN(a.getTime()) && !isNaN(b.getTime()) && b.getTime() >= a.getTime()) {
+              const mins = Math.round((b.getTime() - a.getTime()) / 60000)
+              realMin = realMin === null ? mins : realMin + mins
+              if (mins <= 30) realBuckets.ate_30min++
+              else if (mins <= 60) realBuckets.ate_1h++
+              else realBuckets.acima_1h++
+            }
+          } else if (!declAt) {
+            esperasAbertas++
+          }
+        }
+        // acolhimentos aceitos no período
+        if (
+          isWa &&
+          it.getString('first_auto_reply_at') &&
+          inPeriod(it.getString('first_auto_reply_at'))
+        ) {
+          autoCount++
+        }
+      }
+      // acolhimentos contados pela fila de saída (mais preciso que o item)
+      const outs = $app.findRecordsByFilter(
+        'outbound_messages',
+        "kind = 'acolhimento' && state = 'aceita'",
+        '',
+        500,
+        0,
+      )
+      autoCount = 0
+      for (const o of outs) {
+        const when = o.getString('created')
+        if (inPeriod(when) || inPeriod(o.getString('updated'))) autoCount++
+      }
+    } catch (_) {}
+
+    const canalDisponivel = realCount > 0 || coberturaM > 0 || esperasAbertas > 0
+
     // ---------- resposta ----------
     const avg = (sum, n) => (n > 0 ? Math.round(sum / n) : null)
     return e.json(200, {
@@ -281,6 +344,20 @@ routerAdd(
         acao_vencida: filaVencidas,
         tempo_primeira_acao_min: avg(acaoMediaMin || 0, acaoCount),
         tempo_resposta_declarada_min: avg(respostaMediaMin || 0, respostaCount),
+      },
+      whatsapp_times: {
+        disponivel: canalDisponivel,
+        primeira_resposta_real_min: realCount > 0 ? Math.round((realMin || 0) / realCount) : null,
+        amostra_real: realCount,
+        faixas: realBuckets,
+        com_autoria_declarada: realDeclared,
+        primeira_resposta_automatica: autoCount,
+        esperas_abertas: esperasAbertas,
+        cobertura_m: coberturaM,
+        cobertura_texto:
+          coberturaM > 0 ? realCount + ' de ' + coberturaM : 'sem esperas no período',
+        definicao:
+          'Primeira resposta humana real (canal): minutos entre a espera do WhatsApp e a primeira resposta humana, excluindo acolhimento automático e a Clara. Ação no CRM e resposta declarada continuam em linhas próprias.',
       },
       media: {
         has_data: hasMedia,

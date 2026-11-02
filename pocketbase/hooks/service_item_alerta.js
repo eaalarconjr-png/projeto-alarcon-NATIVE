@@ -110,10 +110,14 @@ cronAdd('fila_alertas_atraso', '* * * * *', () => {
     0,
   )
   const itemsByOp = {}
+  // RN-24: oportunidades que têm item do WhatsApp saem do cálculo antigo de primeira
+  // resposta — quem mede é o relógio do canal (wait_started_at), sem alerta duplo.
+  const opsComWhatsapp = {}
   for (const it of openItems) {
     const o = it.getString('opportunity')
     if (!itemsByOp[o]) itemsByOp[o] = []
     itemsByOp[o].push(it)
+    if (it.getString('channel') === 'whatsapp' && o) opsComWhatsapp[o] = true
   }
 
   for (const rule of rules) {
@@ -136,9 +140,15 @@ cronAdd('fila_alertas_atraso', '* * * * *', () => {
         let reference = null
         let referenceItem = null
         for (const it of items) {
-          if (it.getString('first_human_response_at')) continue // já respondido
+          // RN-22: a resposta real encerra a espera; a declarada (fase 2) continua valendo
+          if (it.getString('first_human_reply_at')) continue
+          if (it.getString('first_human_response_at')) continue
           const last =
-            parseDate(it.getString('last_activity_at')) || parseDate(it.getString('created'))
+            // RN-24: no item do WhatsApp o relógio é a espera atual (wait_started_at)
+            (it.getString('channel') === 'whatsapp' &&
+              parseDate(it.getString('wait_started_at'))) ||
+            parseDate(it.getString('last_activity_at')) ||
+            parseDate(it.getString('created'))
           if (!last) continue
           if (!reference || last.getTime() > reference.getTime()) {
             reference = last
