@@ -348,7 +348,11 @@ routerAdd('POST', '/backend/v1/whatsapp/dapi/{token}', (e) => {
     }
   }
 
-  if (contact) {
+  // RN-27: conversa marcada como "Não é paciente" NÃO volta a ser vinculada por mensagem nova.
+  // O estado só muda quando uma pessoa usa "Voltar a paciente".
+  const markedNotPatient = conv.getString('link_state') === 'nao_paciente'
+
+  if (contact && !markedNotPatient) {
     conv.set('contact', contact.id)
     // RN-08: exatamente UMA oportunidade aberta → liga; zero ou várias → revisar
     let openOpps = []
@@ -501,7 +505,9 @@ routerAdd('POST', '/backend/v1/whatsapp/dapi/{token}', (e) => {
   }
 
   // ---------- item de fila + tempo de espera (só mensagem nova do paciente) ----------
-  if (!fromMe) {
+  // RN-27: conversa marcada como "Não é paciente" entra SÓ na caixa — sem item de fila,
+  // sem alerta, sem oportunidade e sem acolhimento. Este guarda garante isso.
+  if (!fromMe && conv.getString('link_state') !== 'nao_paciente') {
     try {
       let item = null
       if (conv.getString('service_item')) {
@@ -543,7 +549,7 @@ routerAdd('POST', '/backend/v1/whatsapp/dapi/{token}', (e) => {
 
   // ---------- RN-20: acolhimento (texto fixo) ----------
   // Só entra na fila de saída; nada é enviado agora se a conexão não estiver conectada.
-  if (!fromMe && !isHistory) {
+  if (!fromMe && !isHistory && conv.getString('link_state') !== 'nao_paciente') {
     try {
       const mode = conn.getString('greeting_mode')
       const testList = String(conn.getString('greeting_test_phones') || '')
