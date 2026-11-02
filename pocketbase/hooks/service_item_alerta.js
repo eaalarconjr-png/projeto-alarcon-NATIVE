@@ -130,6 +130,7 @@ cronAdd('fila_alertas_atraso', '* * * * *', () => {
       if (!ruleCoversProfile(rule, profile)) continue
 
       if (kind === 'sem_interacao') {
+        console.log('alertas: avaliando ' + ruleName + ' para ' + op.id + ' perfil=' + profile)
         // último contato/atividade da oportunidade sem resposta declarada
         const items = itemsByOp[op.id] || []
         let reference = null

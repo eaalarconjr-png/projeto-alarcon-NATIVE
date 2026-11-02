@@ -52,11 +52,35 @@ export default function ConfiguracoesPage() {
       setError('Informe ao menos uma operadora credenciada (ou deixe "Nenhuma").')
       return
     }
+    if (settings.business_hours_start && settings.business_hours_end) {
+      const toMin = (v: string) => {
+        const m = /^(\d{1,2}):(\d{2})$/.exec(v.trim())
+        return m ? Number(m[1]) * 60 + Number(m[2]) : null
+      }
+      const s = toMin(settings.business_hours_start)
+      const e = toMin(settings.business_hours_end)
+      if (s === null || e === null) {
+        setError('Horário de funcionamento no formato HH:MM (ex.: 08:00 e 18:00).')
+        return
+      }
+      if (e <= s) {
+        setError('O fim do horário de funcionamento precisa ser depois do início.')
+        return
+      }
+    } else if (settings.business_hours_start || settings.business_hours_end) {
+      setError('Preencha início e fim do horário de funcionamento, ou deixe os dois vazios.')
+      return
+    }
     setSaving(true)
     try {
+      // correção 28/10: a tela não enviava horário/SLA/destinatário — os alertas nunca ligavam
       await updateClinicSettings({
         stage_labels: settings.stage_labels,
         credentialed_operators: operators,
+        business_hours_start: settings.business_hours_start || '',
+        business_hours_end: settings.business_hours_end || '',
+        sla_minutes: Number(settings.sla_minutes) || 0,
+        alert_recipient: settings.alert_recipient || '',
       })
       setSaved(true)
     } catch (e) {
@@ -118,6 +142,79 @@ export default function ConfiguracoesPage() {
                 />
               </div>
             ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            Horário de funcionamento e prazo de atendimento
+          </CardTitle>
+          <CardDescription>
+            Usados pelos alertas internos da fila. Fora do horário configurado, o prazo retoma na
+            próxima abertura e nenhum alerta é gerado. Deixe vazio para manter os alertas
+            desligados.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-1">
+              <Label htmlFor="bh-start">Início (HH:MM)</Label>
+              <Input
+                id="bh-start"
+                value={settings?.business_hours_start ?? ''}
+                onChange={(e) =>
+                  setSettings((prev) =>
+                    prev ? { ...prev, business_hours_start: e.target.value } : prev,
+                  )
+                }
+                placeholder="08:00"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="bh-end">Fim (HH:MM)</Label>
+              <Input
+                id="bh-end"
+                value={settings?.business_hours_end ?? ''}
+                onChange={(e) =>
+                  setSettings((prev) =>
+                    prev ? { ...prev, business_hours_end: e.target.value } : prev,
+                  )
+                }
+                placeholder="18:00"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="sla-min">Prazo útil (min)</Label>
+              <Input
+                id="sla-min"
+                type="number"
+                min={0}
+                value={settings?.sla_minutes ?? 0}
+                onChange={(e) =>
+                  setSettings((prev) =>
+                    prev ? { ...prev, sla_minutes: Number(e.target.value) } : prev,
+                  )
+                }
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="alert-recipient">Destinatário dos alertas internos</Label>
+            <select
+              id="alert-recipient"
+              value={settings?.alert_recipient ?? ''}
+              onChange={(e) =>
+                setSettings((prev) => (prev ? { ...prev, alert_recipient: e.target.value } : prev))
+              }
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+            >
+              <option value="">Todos da equipe veem os alertas</option>
+            </select>
+          </div>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? 'Salvando…' : 'Salvar configuração'}
+          </Button>
         </CardContent>
       </Card>
 

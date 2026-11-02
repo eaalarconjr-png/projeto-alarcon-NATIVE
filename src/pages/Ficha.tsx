@@ -17,6 +17,24 @@ import {
   type HistoryEntry,
   type Opportunity,
 } from '@/services/crm'
+import {
+  evaluateOpportunity,
+  listQualifications,
+  type EvaluationResult,
+  type QualificationRecord,
+} from '@/services/qualificacao-avaliacao'
+import {
+  AGENDA_STATUS_LABELS,
+  AGENDA_TYPE_LABELS,
+  cancelEvent,
+  confirmEvent,
+  createAgendaEvent,
+  listAgendaEvents,
+  markPerformed,
+  rescheduleEvent,
+  type AgendaEvent,
+  type AgendaType,
+} from '@/services/agenda'
 
 const STAGES = [
   { value: 'novo', label: 'Novo' },
@@ -82,6 +100,76 @@ export default function FichaPage() {
   const [savingStep, setSavingStep] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
+  // Qualificação (AL-F2-02): avaliações explicáveis da oportunidade.
+  const [quals, setQuals] = useState<QualificationRecord[]>([])
+  const [evaluating, setEvaluating] = useState(false)
+  const [evalError, setEvalError] = useState<string | null>(null)
+  const [lastEval, setLastEval] = useState<EvaluationResult | null>(null)
+
+  // Agenda (AL-F2-04): eventos lançados pela equipe; solicitação não é confirmação.
+  const [events, setEvents] = useState<AgendaEvent[]>([])
+  const [evType, setEvType] = useState<AgendaType>('consulta')
+  const [evAt, setEvAt] = useState('')
+  const [evSource, setEvSource] = useState('')
+  const [evNote, setEvNote] = useState('')
+  const [evError, setEvError] = useState<string | null>(null)
+  const [evSaving, setEvSaving] = useState(false)
+
+  const loadEvents = async (opportunityId: string) => {
+    try {
+      setEvents(await listAgendaEvents(opportunityId))
+    } catch {
+      setEvents([])
+    }
+  }
+
+  const runEventAction = async (action: () => Promise<unknown>) => {
+    setEvError(null)
+    setEvSaving(true)
+    try {
+      await action()
+      if (id) await loadEvents(id)
+    } catch (e) {
+      setEvError(e instanceof Error ? e.message : 'Não foi possível concluir a ação.')
+    } finally {
+      setEvSaving(false)
+    }
+  }
+
+  const submitEvent = () =>
+    runEventAction(() =>
+      createAgendaEvent({
+        opportunity: id ?? '',
+        type: evType,
+        event_at: evAt ? new Date(evAt).toISOString() : '',
+        source: evSource,
+        note: evNote,
+      }),
+    )
+
+  const loadQuals = async (opportunityId: string) => {
+    try {
+      setQuals(await listQualifications(opportunityId))
+    } catch {
+      setQuals([])
+    }
+  }
+
+  const runEvaluation = async () => {
+    if (!id) return
+    setEvalError(null)
+    setEvaluating(true)
+    try {
+      const result = await evaluateOpportunity(id)
+      setLastEval(result)
+      await loadQuals(id)
+    } catch (e) {
+      setEvalError(e instanceof Error ? e.message : 'Não foi possível avaliar a oportunidade.')
+    } finally {
+      setEvaluating(false)
+    }
+  }
+
   const refresh = async () => {
     if (!id) return
     try {
@@ -128,6 +216,8 @@ export default function FichaPage() {
       .then(async ([op, hist]) => {
         setOpportunity(op)
         setHistory(hist)
+        loadQuals(id)
+        loadEvents(id)
         try {
           setContact(await getContact(op.contact))
         } catch {
@@ -169,11 +259,19 @@ export default function FichaPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Ficha da oportunidade</h1>
-        <Button asChild variant="outline">
-          <Link to="/">Voltar</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <a href="#qualificacao">Avaliação explicável</a>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <a href="#agenda">Agenda</a>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/">Voltar</Link>
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -317,6 +415,284 @@ export default function FichaPage() {
             <p className="text-sm text-destructive" role="alert">
               {actionError}
             </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card id="qualificacao">
+        <CardHeader>
+          <CardTitle className="text-base">Qualificação</CardTitle>
+          <CardDescription>
+            Nota explicável pela regra aprovada. Nota baixa não arquiva nem bloqueia — quem decide é
+            a equipe.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={runEvaluation} disabled={evaluating}>
+              {evaluating ? 'Avaliando…' : 'Avaliar perfil do paciente'}
+            </Button>
+            {lastEval?.state === 'nao_configurada' && (
+              <span className="text-sm text-muted-foreground">
+                Nenhum perfil ativo — o score não está configurado.
+              </span>
+            )}
+          </div>
+          {lastEval?.results && lastEval.results.length > 0 && (
+            <div className="rounded-md border border-border p-3">
+              <p className="text-sm font-medium">
+                Perfil mais pretendido: {lastEval.best_profile_name} · {lastEval.best_fit_pct ?? 0}%
+                de aderência
+              </p>
+              {lastEval.worst_profile_name ? (
+                <p className="text-xs text-muted-foreground">
+                  Menos pretendido: {lastEval.worst_profile_name} · {lastEval.worst_fit_pct ?? 0}%
+                  de aderência
+                </p>
+              ) : null}
+            </div>
+          )}
+          {evalError && (
+            <p className="text-sm text-destructive" role="alert">
+              {evalError}
+            </p>
+          )}
+          {quals.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma avaliação registrada. Clique em “Avaliar com a regra ativa”.
+            </p>
+          ) : (
+            <ol className="space-y-3">
+              {quals.map((q) => (
+                <li key={q.id} className="rounded-md border border-border p-3">
+                  <p className="text-sm font-medium">
+                    {q.best_profile_name
+                      ? `Perfil: ${q.best_profile_name}`
+                      : q.expand?.rule_version?.profile_name
+                        ? `Perfil: ${q.expand.rule_version.profile_name}`
+                        : 'Perfil'}
+                    {typeof q.fit_pct === 'number' ? ` · ${q.fit_pct}% de aderência` : ''}
+                    {q.expand?.rule_version?.version_number
+                      ? ` · v${q.expand.rule_version.version_number}`
+                      : ''}
+                    {q.state === 'incompleta' ? ' · incompleta (há critério sem dado)' : ''}
+                    {q.state === 'nao_configurada' ? ' · sem perfil ativo' : ''}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {q.expand?.evaluated_by?.name ?? 'Equipe'} ·{' '}
+                    {new Date(q.created).toLocaleString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                  <ul className="mt-2 space-y-1 text-xs">
+                    {q.explanation.map((x, i) => (
+                      <li key={i} className="text-muted-foreground">
+                        {x.status === 'atingido' ? '✓' : x.status === 'sem_dado' ? '·' : '✗'}{' '}
+                        <span className="font-medium text-foreground">{x.label}</span> — {x.motivo}
+                      </li>
+                    ))}
+                  </ul>
+                  {q.results && q.results.length > 1 && (
+                    <div className="mt-2 space-y-1 border-t border-border pt-2 text-xs">
+                      <p className="font-medium text-foreground">
+                        Ranking dos perfis nesta avaliação
+                      </p>
+                      <ol className="space-y-0.5">
+                        {q.results.map((r) => (
+                          <li
+                            key={r.rule_id}
+                            className="flex justify-between gap-2 text-muted-foreground"
+                          >
+                            <span>
+                              {r.state === 'completa' ? `${r.rank}º` : '—'} {r.profile_name}
+                              <span className="opacity-70">
+                                {' '}
+                                · peso estratégico {r.strategic_weight}
+                              </span>
+                            </span>
+                            <span className="tabular-nums">
+                              {r.state === 'incompleta'
+                                ? 'sem dado'
+                                : r.state === 'invalida'
+                                  ? 'mal configurado'
+                                  : `${r.fit_pct}%`}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                      {q.results.some((r) => r.state === 'incompleta') && (
+                        <p className="text-xs text-muted-foreground">
+                          Perfil “sem dado” depende de informação ainda não lançada — não é o menos
+                          pretendido, apenas não pôde ser julgado.
+                        </p>
+                      )}
+                      {q.results.some((r) => r.state === 'invalida') && (
+                        <p className="text-xs text-destructive">
+                          Perfil “mal configurado”: o valor esperado do critério não existe no
+                          sistema. Corrija em Perfis de paciente — enquanto isso ele não pontua.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card id="agenda">
+        <CardHeader>
+          <CardTitle className="text-base">Agenda e eventos confirmados</CardTitle>
+          <CardDescription>
+            Lançamento manual pela equipe — a agenda clínica oficial continua sendo a fonte.
+            Solicitação não é confirmação; quem confirmou fica registrado.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-4">
+            <div className="space-y-1">
+              <Label htmlFor="ev-type">Tipo</Label>
+              <select
+                id="ev-type"
+                value={evType}
+                onChange={(e) => setEvType(e.target.value as AgendaType)}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+              >
+                <option value="consulta">Consulta</option>
+                <option value="cirurgia">Cirurgia</option>
+                <option value="alta">Alta</option>
+                <option value="resultado_comercial">Resultado comercial</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ev-at">Data e hora *</Label>
+              <Input
+                id="ev-at"
+                type="datetime-local"
+                value={evAt}
+                onChange={(e) => setEvAt(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ev-source">Fonte</Label>
+              <Input
+                id="ev-source"
+                value={evSource}
+                onChange={(e) => setEvSource(e.target.value)}
+                placeholder="Ex.: recepcionista informou"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="ev-note">Observação</Label>
+              <Input
+                id="ev-note"
+                value={evNote}
+                onChange={(e) => setEvNote(e.target.value)}
+                placeholder="Opcional"
+              />
+            </div>
+          </div>
+          <Button onClick={submitEvent} disabled={evSaving}>
+            {evSaving ? 'Registrando…' : 'Registrar evento'}
+          </Button>
+          {evError && (
+            <p className="text-sm text-destructive" role="alert">
+              {evError}
+            </p>
+          )}
+          {events.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum evento registrado.</p>
+          ) : (
+            <ol className="space-y-2">
+              {events.map((ev) => (
+                <li key={ev.id} className="rounded-md border border-border p-3 text-sm">
+                  <p className="font-medium">
+                    {AGENDA_TYPE_LABELS[ev.type]} ·{' '}
+                    {new Date(ev.event_at.replace(' ', 'T')).toLocaleString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                    {ev.replaces ? ' · remarcado de um evento anterior' : ''}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Status: {AGENDA_STATUS_LABELS[ev.status]} · Registrado por{' '}
+                    {ev.expand?.registered_by?.name ?? 'Equipe'}
+                    {ev.expand?.confirmed_by?.name
+                      ? ` · Confirmado por ${ev.expand.confirmed_by.name}`
+                      : ''}
+                    {ev.source ? ` · Fonte: ${ev.source}` : ''}
+                    {ev.note ? ` · ${ev.note}` : ''}
+                  </p>
+                  {ev.status === 'solicitado' && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={evSaving}
+                        onClick={() => runEventAction(() => confirmEvent(ev.id))}
+                      >
+                        Confirmar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={evSaving}
+                        onClick={() => {
+                          const nova = window.prompt('Nova data e hora (AAAA-MM-DD HH:MM):')
+                          if (nova) runEventAction(() => rescheduleEvent(ev.id, nova))
+                        }}
+                      >
+                        Remarcar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-destructive"
+                        disabled={evSaving}
+                        onClick={() => {
+                          if (window.confirm('Cancelar este evento? O histórico fica guardado.')) {
+                            runEventAction(() => cancelEvent(ev.id))
+                          }
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  )}
+                  {ev.status === 'confirmado' && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={evSaving}
+                        onClick={() => runEventAction(() => markPerformed(ev.id))}
+                      >
+                        Marcar realizado
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={evSaving}
+                        onClick={() => {
+                          const nova = window.prompt('Nova data e hora (AAAA-MM-DD HH:MM):')
+                          if (nova) runEventAction(() => rescheduleEvent(ev.id, nova))
+                        }}
+                      >
+                        Remarcar
+                      </Button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ol>
           )}
         </CardContent>
       </Card>

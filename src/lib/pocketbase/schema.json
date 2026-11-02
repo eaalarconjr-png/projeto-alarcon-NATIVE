@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-10-26T18:54:17.840Z",
+  "generatedAt": "2026-10-30T12:48:45.811Z",
   "collections": [
     {
       "name": "users",
       "type": "auth",
       "apiRules": {
         "list": "@request.auth.id != ''",
-        "view": "id = @request.auth.id",
+        "view": "@request.auth.id != ''",
         "create": "",
         "update": "id = @request.auth.id && @request.body.role:changed = false",
         "delete": "id = @request.auth.id"
@@ -29,30 +29,21 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "role",
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "admin",
-            "atendimento",
-            "gestor_trafego"
-          ]
+          "selectValues": ["admin", "atendimento", "gestor_trafego"]
         }
       ],
       "indexes": [
@@ -94,18 +85,24 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "whatsapp",
-            "site",
-            "indicacao",
-            "convenio_app",
-            "outro"
-          ]
+          "selectValues": ["whatsapp", "site", "indicacao", "convenio_app", "outro"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
-      "indexes": [
-        "CREATE INDEX idx_contacts_phone ON contacts (phone)"
-      ]
+      "indexes": ["CREATE INDEX idx_contacts_phone ON contacts (phone)"]
     },
     {
       "name": "opportunities",
@@ -136,11 +133,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "particular",
-            "convenio",
-            "reembolso"
-          ]
+          "selectValues": ["particular", "convenio", "reembolso"]
         },
         {
           "name": "owner",
@@ -168,10 +161,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": [
-            "aberta",
-            "encerrada"
-          ]
+          "selectValues": ["aberta", "encerrada"]
         },
         {
           "name": "close_reason",
@@ -210,6 +200,27 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "care_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["cirurgico", "clinico"]
         }
       ],
       "indexes": [
@@ -276,11 +287,23 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
-      "indexes": [
-        "CREATE INDEX idx_stage_history_opportunity ON stage_history (opportunity)"
-      ]
+      "indexes": ["CREATE INDEX idx_stage_history_opportunity ON stage_history (opportunity)"]
     },
     {
       "name": "clinic_settings",
@@ -317,11 +340,1076 @@
           "required": false,
           "system": false,
           "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "business_hours_start",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "business_hours_end",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sla_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "alert_recipient",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_clinic_settings_key ON clinic_settings (settings_key)"]
+    },
+    {
+      "name": "forms",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "update": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "delete": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'"
+      },
+      "fields": [
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["rascunho", "publicado", "desativado"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "form_versions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "update": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "delete": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'"
+      },
+      "fields": [
+        {
+          "name": "form",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "forms"
+        },
+        {
+          "name": "version_number",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "schema",
+          "type": "json",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["rascunho", "publicada", "desativada"]
+        },
+        {
+          "name": "published_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "published_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_form_versions_form ON form_versions (form)"]
+    },
+    {
+      "name": "submissions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "form_version",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "form_versions"
+        },
+        {
+          "name": "submission_key",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "answers",
+          "type": "json",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "origin_declared",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "whatsapp",
+            "site",
+            "indicacao",
+            "convenio_app",
+            "outro",
+            "nao_identificado"
+          ]
+        },
+        {
+          "name": "origin_captured",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "opportunity",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "opportunities"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_submissions_key ON submissions (submission_key)"]
+    },
+    {
+      "name": "insurance_plans",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "update": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "path",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["credenciado", "reembolso", "particular", "revisao"]
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_insurance_plans_name ON insurance_plans (name)"]
+    },
+    {
+      "name": "qualification_rule_versions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "version_number",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["rascunho", "ativo", "arquivado"]
+        },
+        {
+          "name": "criteria",
+          "type": "json",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "approved_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "approved_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "profile_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "strategic_weight",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "target_notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cpa_target_cents",
+          "type": "number",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_qrv_status ON qualification_rule_versions (status)"]
+    },
+    {
+      "name": "qualifications",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": null,
+        "update": null,
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "opportunity",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "opportunities"
+        },
+        {
+          "name": "rule_version",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "qualification_rule_versions"
+        },
+        {
+          "name": "state",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["completa", "incompleta", "nao_configurada"]
+        },
+        {
+          "name": "score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "explanation",
+          "type": "json",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "evaluated_by",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "results",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "best_profile_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "fit_pct",
+          "type": "number",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_qualifications_opportunity ON qualifications (opportunity)"]
+    },
+    {
+      "name": "service_items",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "update": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "opportunity",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "opportunities"
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "assignee",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "next_action",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "deadline_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["pendente", "em_andamento", "concluido", "cancelado"]
+        },
+        {
+          "name": "waiting_human",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "first_action_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "first_human_response_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "first_human_response_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "last_activity_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
       "indexes": [
-        "CREATE UNIQUE INDEX idx_clinic_settings_key ON clinic_settings (settings_key)"
+        "CREATE INDEX idx_service_items_status ON service_items (status)",
+        "CREATE INDEX idx_service_items_opportunity ON service_items (opportunity)"
       ]
+    },
+    {
+      "name": "internal_alerts",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": null,
+        "update": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "item",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "service_items"
+        },
+        {
+          "name": "violation",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "message",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "recipient",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "acknowledged_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "acknowledged_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "rule",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "alert_rules"
+        },
+        {
+          "name": "due_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "dedupe_key",
+          "type": "text",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_internal_alerts_item ON internal_alerts (item)"]
+    },
+    {
+      "name": "agenda_events",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "view": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "create": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "update": "@request.auth.id != '' && @request.auth.role != 'gestor_trafego'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "opportunity",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "opportunities"
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["consulta", "cirurgia", "alta", "resultado_comercial"]
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["solicitado", "confirmado", "remarcado", "cancelado", "realizado"]
+        },
+        {
+          "name": "event_at",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "registered_by",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "confirmed_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "replaces",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "agenda_events"
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_agenda_events_opportunity ON agenda_events (opportunity)",
+        "CREATE INDEX idx_agenda_events_status ON agenda_events (status)"
+      ]
+    },
+    {
+      "name": "alert_rules",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "kind",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["sem_interacao", "antes_consulta", "pos_atendimento", "retorno"]
+        },
+        {
+          "name": "threshold_minutes",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["urgente", "alta", "normal", "baixa"]
+        },
+        {
+          "name": "applies_to",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "particular",
+            "convenio",
+            "reembolso",
+            "clinico_particular",
+            "clinico_porto",
+            "todos"
+          ]
+        },
+        {
+          "name": "action_hint",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_alert_rules_active ON alert_rules (active)"]
+    },
+    {
+      "name": "media_daily",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "platform",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["google", "meta", "instagram", "outro"]
+        },
+        {
+          "name": "account_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "account_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "campaign_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "campaign_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "day",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "spend_cents",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "impressions",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "clicks",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "platform_leads",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source_kind",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["import", "api"]
+        },
+        {
+          "name": "import_batch",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_media_daily_key ON media_daily (platform, account_id, campaign_id, day, source_kind)",
+        "CREATE INDEX idx_media_daily_day ON media_daily (day)"
+      ]
+    },
+    {
+      "name": "media_imports",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "filename",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "platform",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "period_start",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "period_end",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rows_total",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rows_accepted",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rows_rejected",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rejected_sample",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "imported_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "channel_targets",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "platform",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["google", "meta", "instagram", "outro"]
+        },
+        {
+          "name": "monthly_budget_cents",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_channel_targets_platform ON channel_targets (platform)"]
     }
   ]
 }
