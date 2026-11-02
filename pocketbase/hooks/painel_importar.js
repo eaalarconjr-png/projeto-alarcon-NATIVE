@@ -23,11 +23,15 @@ routerAdd(
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i] || {}
       const line = i + 2 // +2: cabeçalho na linha 1
-      const platform = String(r.platform || '').trim().toLowerCase()
+      const platform = String(r.platform || '')
+        .trim()
+        .toLowerCase()
       const account_id = String(r.account_id || '').trim()
       const campaign_id = String(r.campaign_id || '').trim()
       const day = String(r.day || '').trim()
-      const currency = String(r.currency || '').trim().toUpperCase()
+      const currency = String(r.currency || '')
+        .trim()
+        .toUpperCase()
       const spend = r.spend
 
       const problems = []
@@ -146,12 +150,21 @@ routerAdd(
     // seja sempre correta, mesmo que o cliente envie apenas `spend`.
     const validPlatforms = ['google', 'meta', 'instagram', 'outro']
     const normalize = (r) => {
-      const platform = String(r.platform || '').trim().toLowerCase()
+      const platform = String(r.platform || '')
+        .trim()
+        .toLowerCase()
       const account_id = String(r.account_id || '').trim()
       const campaign_id = String(r.campaign_id || '').trim()
-      const currency = String(r.currency || '').trim().toUpperCase()
+      const currency = String(r.currency || '')
+        .trim()
+        .toUpperCase()
       const dayKey = pbDay(r.day)
-      const spend = r.spend !== undefined ? r.spend : r.spend_cents !== undefined ? Number(r.spend_cents) / 100 : ''
+      const spend =
+        r.spend !== undefined
+          ? r.spend
+          : r.spend_cents !== undefined
+            ? Number(r.spend_cents) / 100
+            : ''
       if (!validPlatforms.includes(platform)) return null
       if (!account_id || !campaign_id || !dayKey) return null
       if (!/^[A-Z]{3}$/.test(currency)) return null
