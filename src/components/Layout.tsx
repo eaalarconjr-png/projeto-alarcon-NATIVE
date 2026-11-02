@@ -13,6 +13,7 @@ export default function Layout() {
   const navItems = [
     { to: '/painel', label: 'Painel', gestor: true },
     { to: '/midia', label: 'Mídia', gestor: true },
+    { to: '/conversas', label: 'Conversas', gestor: false },
     { to: '/whatsapp', label: 'WhatsApp', gestor: false },
     { to: '/', label: 'Oportunidades', gestor: true },
     { to: '/contatos/novo', label: 'Novo contato', gestor: true },
