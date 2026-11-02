@@ -1,35 +1,28 @@
 // AL-F4-01: rotas da conexão do WhatsApp (SPEC AL-F4-A, CA-4-09/16).
-// Regras que esta rota respeita:
+// Regras que estas rotas respeitam:
 // - A chave da D-API NUNCA aparece na tela nem no log; é lida só no servidor por $secrets.
 // - O sessionId é exibido MASCARADO (só os 4 últimos).
-// - Nenhuma conexão real é criada aqui: a única conexão que estas rotas criam é a FIXTURE
+// - Nenhuma conexão real é conectada aqui: a única conexão criada por rota é a FIXTURE
 //   (`is_fixture=true`, status `demonstracao`), usada para provar tudo antes da sessão de
-//   ativação. A conexão real nasce na AL-F4-06, com o Dr.
-// - `ligado` no acolhimento exige `other_bot_active=false`; com a Clara ativa, fica em
-//   `somente_teste` (decisão do Dr. e SPEC).
-// - Testar conexão contra a D-API real só faz sentido com chave; sem chave, resposta honesta.
-
-const maskSession = (s) => {
-  const v = String(s || '')
-  if (v.length <= 4) return v ? '••••' + v : ''
-  return '••••' + v.slice(-4)
-}
-
-const adminOnly = (e) => {
-  const u = e.auth
-  if (!u) return e.unauthorizedError()
-  if (u.getString('role') !== 'admin') return e.forbiddenError('Apenas o administrador.')
-  return null
-}
+//   ativação. A conexão real só vira `conectado` na AL-F4-06, com o Dr.
+// - `ligado` no acolhimento exige `other_bot_active=false`; com a Clara ativa no número,
+//   fica em `somente_teste` (decisão do Dr. e SPEC).
+// POCKETBASE JSVM: cada callback roda em VM própria — TODO helper mora DENTRO do callback.
 
 // ---------- estado da conexão para a tela ----------
 routerAdd(
   'GET',
   '/backend/v1/whatsapp/conexao',
   (e) => {
-    const deny = adminOnly(e)
-    if (deny) return deny
+    const u = e.auth
+    if (!u) return e.unauthorizedError()
+    if (u.getString('role') !== 'admin') return e.forbiddenError('Apenas o administrador.')
 
+    const maskSession = (s) => {
+      const v = String(s || '')
+      if (v.length <= 4) return v ? '••••' + v : ''
+      return '••••' + v.slice(-4)
+    }
     const hasSecret = (k) => {
       try {
         const v = $secrets.get(k)
@@ -66,7 +59,7 @@ routerAdd(
     return e.json(200, {
       connections: out,
       secrets: {
-        // presença, nunca o valor
+        // presença do segredo, NUNCA o valor
         DAPI_API_KEY: hasSecret('DAPI_API_KEY'),
         DAPI_WEBHOOK_TOKEN: hasSecret('DAPI_WEBHOOK_TOKEN'),
         DAPI_WEBHOOK_TOKEN_ANTERIOR: hasSecret('DAPI_WEBHOOK_TOKEN_ANTERIOR'),
@@ -81,13 +74,14 @@ routerAdd(
   $apis.requireAuth(),
 )
 
-// ---------- salvar/acompanhar a conexão (real: só dados, sem conectar) ----------
+// ---------- criar/atualizar a conexão ----------
 routerAdd(
   'POST',
   '/backend/v1/whatsapp/conexao',
   (e) => {
-    const deny = adminOnly(e)
-    if (deny) return deny
+    const u = e.auth
+    if (!u) return e.unauthorizedError()
+    if (u.getString('role') !== 'admin') return e.forbiddenError('Apenas o administrador.')
     const b = e.requestInfo().body || {}
 
     const id = String(b.id || '')
@@ -99,8 +93,7 @@ routerAdd(
         return e.notFoundError('Conexão não encontrada.')
       }
     } else {
-      // Criação pela tela = conexão real em `desconectado` (sem sessionId, sem webhook ativo).
-      // A conexão só vira `conectado` na AL-F4-06, depois do QR e do primeiro evento.
+      // Criação pela tela = conexão real em `desconectado` (sem sessionId, webhook inativo).
       rec = new Record($app.findCollectionByNameOrId('channel_connections'))
       rec.set('provider', 'dapi')
       rec.set('mode', 'coexistencia')
@@ -112,7 +105,7 @@ routerAdd(
 
     if (b.label !== undefined) rec.set('label', String(b.label).slice(0, 120))
     if (b.phone_number !== undefined) {
-      // normaliza: só dígitos, com 55 (a D-API espera assim no envio)
+      // normaliza: só dígitos, com 55 (formato que a D-API espera no envio)
       let digits = String(b.phone_number || '').replace(/\D/g, '')
       if (digits && digits.length >= 10 && digits.indexOf('55') !== 0) digits = '55' + digits
       rec.set('phone_number', digits.slice(0, 15))
@@ -121,7 +114,6 @@ routerAdd(
     if (b.active !== undefined) rec.set('active', !!b.active)
     if (b.default_owner !== undefined) rec.set('default_owner', String(b.default_owner || ''))
 
-    // acolhimento
     if (b.greeting_mode !== undefined) {
       const mode = String(b.greeting_mode)
       if (mode === 'ligado') {
@@ -131,16 +123,17 @@ routerAdd(
             'Não é possível ligar o acolhimento com a Clara (ou outro robô) ainda ativa neste número.',
           )
         }
-        const u = e.auth
         rec.set('greeting_live_authorized_by', u.id)
         rec.set('greeting_live_authorized_at', new Date().toISOString())
       }
       rec.set('greeting_mode', mode)
     }
-    if (b.greeting_text_open !== undefined)
+    if (b.greeting_text_open !== undefined) {
       rec.set('greeting_text_open', String(b.greeting_text_open).slice(0, 1000))
-    if (b.greeting_text_closed !== undefined)
+    }
+    if (b.greeting_text_closed !== undefined) {
       rec.set('greeting_text_closed', String(b.greeting_text_closed).slice(0, 1000))
+    }
     if (b.greeting_test_phones !== undefined) {
       rec.set(
         'greeting_test_phones',
@@ -150,7 +143,7 @@ routerAdd(
       )
     }
     if (b.greeting_text_open !== undefined || b.greeting_text_closed !== undefined) {
-      rec.set('greeting_approved_by', e.auth.id)
+      rec.set('greeting_approved_by', u.id)
       rec.set('greeting_approved_at', new Date().toISOString())
     }
 
@@ -164,23 +157,24 @@ routerAdd(
   $apis.requireAuth(),
 )
 
-// ---------- criar a conexão FIXTURE (só para provas) ----------
+// ---------- criar a conexão FIXTURE (só para provas; some ao final da fase) ----------
 routerAdd(
   'POST',
   '/backend/v1/whatsapp/fixture/conexao',
   (e) => {
-    const deny = adminOnly(e)
-    if (deny) return deny
-    // exige o segredo de prova: sem ele, 404 (as rotas de prova somem ao final da fase)
+    const u = e.auth
+    if (!u) return e.unauthorizedError()
+    if (u.getString('role') !== 'admin') return e.forbiddenError('Apenas o administrador.')
+
+    // sem o segredo de prova, a rota responde 404 (não revela que existe)
     let secretOk = false
     try {
       const expected = String($secrets.get('FIXTURE_SECRET') || '')
-      secretOk =
-        expected !== '' && expected === String(e.request.header.get('X-Fixture-Secret') || '')
+      const got = String(e.request.header.get('X-Fixture-Secret') || '')
+      secretOk = expected !== '' && expected === got
     } catch (_) {}
     if (!secretOk) return e.notFoundError()
 
-    // uma única conexão fixture por projeto (idempotente)
     const existing = $app.findRecordsByFilter('channel_connections', 'is_fixture = true', '', 1, 0)
     if (existing.length > 0) {
       return e.json(200, { id: existing[0].id, reused: true })
@@ -189,7 +183,7 @@ routerAdd(
     const rec = new Record($app.findCollectionByNameOrId('channel_connections'))
     rec.set('provider', 'dapi')
     rec.set('label', 'Conexão de demonstração')
-    rec.set('phone_number', '5511900000000') // número ficticio, não é o da clínica
+    rec.set('phone_number', '5511900000000') // número fictício, não é o da clínica
     rec.set('session_id', 'fixture-session-0001')
     rec.set('mode', 'coexistencia')
     rec.set('status', 'demonstracao')
