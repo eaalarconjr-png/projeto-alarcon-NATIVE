@@ -190,14 +190,16 @@ routerAdd(
       rec.set('error_code', callError)
       rec.set('decision', 'recusada')
       $app.save(rec)
-      return e.json(200, {
-        ok: false,
-        error: callError,
-        message:
-          callError === 'ia_indisponivel'
-            ? 'Resumo por IA não está configurado. A caixa e os tempos continuam funcionando.'
-            : 'A IA não respondeu agora. Tente de novo em instantes.',
-      })
+      // mensagem honesta: "não configurado" e "não respondeu" são coisas diferentes
+      let msg = 'A IA não respondeu agora. Tente de novo em instantes.'
+      if (callError === 'ia_indisponivel') {
+        msg =
+          'Resumo por IA ainda não está configurado. A caixa e os tempos continuam funcionando normalmente.'
+      } else if (callError.indexOf('http_4') === 0) {
+        msg =
+          'O resumo por IA está mal configurado (endpoint não encontrado). Nada foi alterado; avise o responsável técnico.'
+      }
+      return e.json(200, { ok: false, error: callError, message: msg })
     }
 
     // ---------- validação da resposta (RN-34) ----------
