@@ -92,7 +92,7 @@ export default function FichaPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [nextStep, setNextStep] = useState('')
+  const [nextStep, setNextStepDraft] = useState('')
   const [nextStepAt, setNextStepAt] = useState('')
   const [moveStageValue, setMoveStageValue] = useState('em_atendimento')
   const [moveNote, setMoveNote] = useState('')
@@ -176,7 +176,7 @@ export default function FichaPage() {
       const op = await getOpportunity(id)
       setOpportunity(op)
       setHistory(await getStageHistory(id))
-      setNextStep(op.next_step || '')
+      setNextStepDraft(op.next_step || '')
       setNextStepAt(op.next_step_at ? op.next_step_at.slice(0, 10) : '')
     } catch (e) {
       setActionError(e instanceof Error ? e.message : 'Não foi possível atualizar a ficha.')
@@ -339,7 +339,7 @@ export default function FichaPage() {
               <Input
                 id="next-step"
                 value={nextStep}
-                onChange={(e) => setNextStep(e.target.value)}
+                onChange={(e) => setNextStepDraft(e.target.value)}
                 placeholder="Ex.: ligar para confirmar consulta"
               />
             </div>

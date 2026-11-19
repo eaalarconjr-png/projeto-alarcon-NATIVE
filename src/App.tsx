@@ -25,6 +25,11 @@ import MidiaPage from './pages/Midia'
 import WhatsAppPage from './pages/WhatsApp'
 import ConversasPage from './pages/Conversas'
 import RequireAuth from './components/RequireAuth'
+import RequireAdmin from './components/RequireAdmin'
+import AdminLayout from './pages/admin/AdminLayout'
+import AdminLoginPage from './pages/admin/AdminLogin'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminMcp from './pages/admin/AdminMcp'
 
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
 // AVOID REMOVING ANY CONTEXT PROVIDERS FROM THIS FILE (e.g. TooltipProvider, Toaster, Sonner)
@@ -159,6 +164,17 @@ const App = () => (
             }
           />
           {/* ADD ALL CUSTOM ROUTES MUST BE ADDED HERE */}
+        </Route>
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route
+          element={
+            <RequireAdmin>
+              <AdminLayout />
+            </RequireAdmin>
+          }
+        >
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/mcp" element={<AdminMcp />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
