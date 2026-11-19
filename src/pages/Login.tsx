@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { HeartPulse } from 'lucide-react'
 import { signIn } from '@/services/auth'
 
 /**
@@ -38,10 +39,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle>Alarcon Medical Center</CardTitle>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
+      <div
+        className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-primary/15 blur-3xl"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute -bottom-32 -right-24 h-96 w-96 rounded-full bg-pink-300/30 blur-3xl"
+        aria-hidden="true"
+      />
+      <Card className="relative w-full max-w-md rounded-[2rem] p-3 shadow-float">
+        <CardHeader className="items-center space-y-3 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[0_10px_22px_-8px_hsl(var(--primary)/0.7)]">
+            <HeartPulse className="h-7 w-7" aria-hidden="true" />
+          </div>
+          <CardTitle className="text-2xl">Alarcon Medical Center</CardTitle>
           <CardDescription>Acesse com a sua conta da equipe</CardDescription>
         </CardHeader>
         <CardContent>
@@ -72,7 +84,7 @@ export default function LoginPage() {
                 {error}
               </p>
             )}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" size="lg" className="w-full" disabled={loading}>
               {loading ? 'Entrando…' : 'Entrar'}
             </Button>
           </form>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { BadgeCheck, CalendarCheck, TrendingUp, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -142,8 +143,15 @@ export default function PainelPage() {
           <div className="grid gap-3 sm:grid-cols-4">
             <Card>
               <CardHeader className="pb-1">
-                <CardDescription>Pessoas novas</CardDescription>
-                <CardTitle className="text-3xl">{fmtNum(d.crm.new_contacts)}</CardTitle>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-2">
+                    <CardDescription>Pessoas novas</CardDescription>
+                    <CardTitle className="text-4xl">{fmtNum(d.crm.new_contacts)}</CardTitle>
+                  </div>
+                  <span className="icon-tile tile-blue">
+                    <Users className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                </div>
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground">
                 {d.definitions.pessoas}
@@ -151,8 +159,15 @@ export default function PainelPage() {
             </Card>
             <Card>
               <CardHeader className="pb-1">
-                <CardDescription>Oportunidades novas</CardDescription>
-                <CardTitle className="text-3xl">{fmtNum(d.crm.new_opportunities)}</CardTitle>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-2">
+                    <CardDescription>Oportunidades novas</CardDescription>
+                    <CardTitle className="text-4xl">{fmtNum(d.crm.new_opportunities)}</CardTitle>
+                  </div>
+                  <span className="icon-tile tile-pink">
+                    <TrendingUp className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                </div>
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground">
                 {d.definitions.oportunidades}
@@ -160,8 +175,17 @@ export default function PainelPage() {
             </Card>
             <Card>
               <CardHeader className="pb-1">
-                <CardDescription>Consultas confirmadas</CardDescription>
-                <CardTitle className="text-3xl">{fmtNum(d.agenda.consultas.confirmadas)}</CardTitle>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-2">
+                    <CardDescription>Consultas confirmadas</CardDescription>
+                    <CardTitle className="text-4xl">
+                      {fmtNum(d.agenda.consultas.confirmadas)}
+                    </CardTitle>
+                  </div>
+                  <span className="icon-tile tile-green">
+                    <CalendarCheck className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                </div>
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground">
                 {d.agenda.consultas.canceladas} canceladas (não contam) ·{' '}
@@ -170,8 +194,17 @@ export default function PainelPage() {
             </Card>
             <Card>
               <CardHeader className="pb-1">
-                <CardDescription>Resultados comerciais</CardDescription>
-                <CardTitle className="text-3xl">{fmtNum(d.agenda.resultados_comerciais)}</CardTitle>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-2">
+                    <CardDescription>Resultados comerciais</CardDescription>
+                    <CardTitle className="text-4xl">
+                      {fmtNum(d.agenda.resultados_comerciais)}
+                    </CardTitle>
+                  </div>
+                  <span className="icon-tile tile-orange">
+                    <BadgeCheck className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                </div>
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground">
                 Eventos de resultado confirmados pela equipe
@@ -192,7 +225,7 @@ export default function PainelPage() {
                 </p>
               ) : (
                 Object.entries(d.crm.stages).map(([stage, n]) => (
-                  <div key={stage} className="rounded-md border border-border p-3 text-center">
+                  <div key={stage} className="rounded-2xl bg-muted/60 p-3 text-center">
                     <p className="text-2xl font-semibold">{n}</p>
                     <p className="text-xs text-muted-foreground">{stageLabels[stage] ?? stage}</p>
                   </div>
